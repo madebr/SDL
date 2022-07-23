@@ -4111,7 +4111,7 @@ case "$host" in
         VERSION_SOURCES="$srcdir/src/main/windows/*.rc"
         SDLMAIN_SOURCES="$srcdir/src/main/windows/*.c"
         SDL_CFLAGS="$SDL_CFLAGS -Dmain=SDL_main"
-        SDL_LIBS="-lSDL2main $SDL_LIBS -mwindows"
+        SDL_LIBS="-lSDL2main $SDL_LIBS"
 
         # Check to see if this is a mingw or cygwin build
         have_mingw32=
