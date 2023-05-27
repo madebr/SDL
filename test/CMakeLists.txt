@@ -7,7 +7,7 @@ include(CMakePushCheckState)
 
 set(SDL_TEST_EXECUTABLES)
 set(SDL_TESTS_NONINTERACTIVE)
-set(SDL_TESTS_NEEDS_ESOURCES)
+set(SDL_TESTS_NEEDS_RESOURCES)
 
 macro(add_sdl_test_executable TARGET)
     cmake_parse_arguments(AST "NONINTERACTIVE;NEEDS_RESOURCES" "" "" ${ARGN})
@@ -18,7 +18,7 @@ macro(add_sdl_test_executable TARGET)
         list(APPEND SDL_TESTS_NONINTERACTIVE ${TARGET})
     endif()
     if(AST_NEEDS_RESOURCES)
-        list(APPEND SDL_TESTS_NEEDS_ESOURCES ${TARGET})
+        list(APPEND SDL_TESTS_NEEDS_RESOURCES ${TARGET})
     endif()
 endmacro()
 
@@ -249,7 +249,7 @@ file(COPY ${RESOURCE_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 if(PSP)
     # Build EBOOT files if building for PSP
     set(BUILD_EBOOT
-        ${SDL_TESTS_NEEDS_ESOURCES}
+        ${SDL_TESTS_NEEDS_RESOURCES}
         testatomic
         testaudiocapture
         testaudioinfo
