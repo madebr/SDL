@@ -248,41 +248,7 @@ file(COPY ${RESOURCE_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(PSP)
     # Build EBOOT files if building for PSP
-    set(BUILD_EBOOT
-        ${SDL_TESTS_NEEDS_RESOURCES}
-        testatomic
-        testaudiocapture
-        testaudioinfo
-        testbounds
-        testdisplayinfo
-        testdraw2
-        testdrawchessboard
-        testerror
-        testfile
-        testfilesystem
-        testgeometry
-        testgl2
-        testhittesting
-        testiconv
-        testintersections
-        testjoystick
-        testlock
-        testmessage
-        testoverlay2
-        testplatform
-        testpower
-        testqsort
-        testsem
-        teststreaming
-        testsurround
-        testthread
-        testtimer
-        testver
-        testviewport
-        testwm2
-        torturethread
-    )
-    foreach(APP IN LISTS BUILD_EBOOT)
+    foreach(APP IN LISTS SDL_TEST_EXECUTABLES)
         create_pbp_file(
             TARGET          ${APP}
             TITLE           SDL-${APP}
