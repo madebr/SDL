@@ -1,6 +1,13 @@
 #
 # CMake script for building the SDL tests
 #
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+
+include(CheckIncludeFile)
+include(CMakePushCheckState)
+include(sdlcompilers)
+
 if(SDL_TESTS_LINK_SHARED)
     set(sdl_name_component SDL3-shared)
 else()
