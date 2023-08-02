@@ -103,7 +103,7 @@ else()
 endif()
 unset(_sdl3test_library)
 
-if(SDL3_SDL3-shared_FOUND OR SDL3_SDL3-static_FOUND)
+if(SDL3_SDL3-shared_FOUND)
     set(SDL3_SDL3_FOUND TRUE)
 endif()
 
