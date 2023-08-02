@@ -31,15 +31,11 @@ endmacro()
 
 set(SDL3_FOUND TRUE)
 
-# Compute the installation prefix relative to this file.
-get_filename_component(_sdl3_framework_path "${CMAKE_CURRENT_LIST_FILE}" PATH)      # /SDL3.framework/Resources/CMake/
-get_filename_component(_sdl3_framework_path "${_IMPORT_PREFIX}" PATH)               # /SDL3.framework/Resources/
-get_filename_component(_sdl3_framework_path "${_IMPORT_PREFIX}" PATH)               # /SDL3.framework/
-get_filename_component(_sdl3_framework_parent_path "${_sdl3_framework_path}" PATH)  # /
+# Compute the installation prefix relative to this file:   MAKE_CURRENT_LIST_FILE             # /SDL3.framework/Resources/CMake
+get_filename_component(_sdl3_framework_path "${CMAKE_CURRENT_LIST_FILE}/../.." ABSOLUTE)      # /SDL3.framework
+get_filename_component(_sdl3_framework_parent_path "${_sdl3_framework_path}/.." ABSOLUTE)     # /
 
 set_and_check(_sdl3_include_dirs "${_sdl3_framework_path}/Headers")
-
-set(SDL3_LIBRARIES "SDL3::SDL3")
 
 # All targets are created, even when some might not be requested though COMPONENTS.
 # This is done for compatibility with CMake generated SDL3-target.cmake files.
@@ -78,7 +74,7 @@ set(SDL3_SDL3_test FALSE)
 unset(_sdl3_framework_parent_path)
 unset(_sdl3_framework_path)
 
-if(SDL3_SDL3-shared_FOUND OR SDL3_SDL3-static_FOUND)
+if(SDL3_SDL3-shared_FOUND)
     set(SDL3_SDL3_FOUND TRUE)
 endif()
 
@@ -96,9 +92,13 @@ endfunction()
 if(NOT TARGET SDL3::SDL3)
     if(TARGET SDL3::SDL3-shared)
         _sdl_create_target_alias_compat(SDL3::SDL3 SDL3::SDL3-shared)
-    else()
-        _sdl_create_target_alias_compat(SDL3::SDL3 SDL3::SDL3-static)
     endif()
 endif()
 
 check_required_components(SDL3)
+
+set(SDL3_LIBRARIES SDL3::SDL3)
+set(SDL3_STATIC_LIBRARIES SDL3::SDL3-static)
+set(SDL3_STATIC_PRIVATE_LIBS)
+
+set(SDL3TEST_LIBRARY SDL3::SDL3_test)
