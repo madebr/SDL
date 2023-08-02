@@ -1,0 +1,168 @@
+name: 'release'
+run-name: 'Create SDL release artifacts for ${{ inputs.commit }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit of SDL'
+        required: true
+
+jobs:
+  msvc:
+    runs-on: windows-2019
+    outputs:
+      VC-x86: ${{ steps.releaser.outputs.VC-x86 }}
+      VC-x64: ${{ steps.releaser.outputs.VC-x64 }}
+      VC-devel: ${{ steps.releaser.outputs.VC-devel }}
+    steps:
+    - name: 'Set up Python'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: 'Fetch releaser.py'
+      uses: actions/checkout@v3
+      with:
+        sparse-checkout: 'build-scripts/releaser.py'
+    - name: 'Set up SDL sources'
+      uses: actions/checkout@v3
+      with:
+        path: 'SDL'
+        ref: ${{ inputs.commit }}
+    - name: 'Build MSVC binary archives'
+      id: releaser
+      run: |
+        python build-scripts/releaser.py        `
+          --create win32                        `
+          --commit ${{ inputs.commit }}         `
+          --project SDL3                        `
+          --root "${{ github.workspace }}/SDL"  `
+          --github                              `
+          --debug
+    - name: 'Store MSVC archives'
+      uses: actions/upload-artifact@v3
+      with:
+        name: win32
+        path: '${{ github.workspace}}/dist'
+
+  src:
+    runs-on: ubuntu-latest
+    outputs:
+      project: ${{ steps.releaser.outputs.project }}
+      version: ${{ steps.releaser.outputs.version }}
+      src-tar-gz: ${{ steps.releaser.outputs.src-tar-gz }}
+      src-zip: ${{ steps.releaser.outputs.src-zip }}
+    steps:
+      - name: 'Set up Python'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: 'Fetch releaser.py'
+        uses: actions/checkout@v3
+        with:
+          sparse-checkout: 'build-scripts/releaser.py'
+      - name: 'Set up SDL sources'
+        uses: actions/checkout@v3
+        with:
+          path: 'SDL'
+          ref: ${{ inputs.commit }}
+      - name: 'Build Source archive'
+        id: releaser
+        shell: bash
+        run: |
+          python build-scripts/releaser.py \
+            --create source \
+            --commit ${{ inputs.commit }} \
+            --project SDL3 \
+            --root "${{ github.workspace }}/SDL" \
+            --github \
+            --debug
+      - name: 'Store source archives'
+        uses: actions/upload-artifact@v3
+        with:
+          name: sources
+          path: '${{ github.workspace}}/dist'
+
+  linux-verify:
+    needs: [src]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Download source archives'
+        uses: actions/download-artifact@v3
+        with:
+          name: sources
+          path: '${{ github.workspace }}'
+      - name: 'Unzip ${{ needs.src.outputs.src-zip }}'
+        id: zip
+        run: |
+          mkdir /tmp/zipdir
+          cd /tmp/zipdir
+          unzip "${{ github.workspace }}/${{ needs.src.outputs.src-zip }}"
+          echo "path=/tmp/tardir/${{ needs.src.outputs.project }}-${{ needs.src.outputs.version }}" >>$GITHUB_OUTPUT
+      - name: 'Untar ${{ needs.src.outputs.src-tar-gz }}'
+        id: tar
+        run: |
+          mkdir -p /tmp/tardir
+          tar -C /tmp/tardir -v -x -f "${{ github.workspace }}/${{ needs.src.outputs.src-tar-gz }}"
+          echo "path=/tmp/zipdir/${{ needs.src.outputs.project }}-${{ needs.src.outputs.version }}" >>$GITHUB_OUTPUT
+      - name: 'Compare contents of ${{ needs.src.outputs.src-zip }} and  ${{ needs.src.outputs.src-tar-gz }}'
+        run: |
+          diff /tmp/zipdir /tmp/tardir
+      - name: 'Test versioning'
+        shell: bash
+        run: |
+          ${{ steps.tar.outputs.path }}/build-scripts/test-versioning.sh
+      - name: 'CMake (configure + build + tests)'
+        run: |
+          cmake -S ${{ steps.tar.outputs.path }} -B /tmp/build -DSDL_TEST_LIBRARY=TRUE -DSDL_TESTS=TRUE
+          cmake --build /tmp/build
+          ctest --test-dir /tmp/build --no-tests=error
+
+  msvc-verify:
+    needs: [msvc, src]
+    runs-on: windows-latest
+    steps:
+      - name: 'Download source archives'
+        uses: actions/download-artifact@v3
+        with:
+          name: sources
+          path: '${{ github.workspace }}'
+      - name: 'Download MSVC binaries'
+        uses: actions/download-artifact@v3
+        with:
+          name: win32
+          path: '${{ github.workspace }}'
+      - name: 'Unzip ${{ needs.src.outputs.src-zip }}'
+        id: src
+        run: |
+          mkdir '${{ github.workspace }}/sources'
+          cd '${{ github.workspace }}/sources'
+          unzip "${{ github.workspace }}/${{ needs.src.outputs.src-zip }}"
+          echo "path=${{ github.workspace }}/sources/${{ needs.src.outputs.project }}-${{ needs.src.outputs.version }}" >>$env:GITHUB_OUTPUT
+      - name: 'Unzip ${{ needs.msvc.outputs.VC-devel }}'
+        id: bin
+        run: |
+          mkdir '${{ github.workspace }}/vc'
+          cd '${{ github.workspace }}/vc'
+          unzip "${{ github.workspace }}/${{ needs.msvc.outputs.VC-devel }}"
+          echo "path=${{ github.workspace }}/vc/${{ needs.src.outputs.project }}-${{ needs.src.outputs.version }}" >>$env:GITHUB_OUTPUT
+      - name: 'CMake (configure + build + tests) x86'
+        run: |
+          $env:PATH += ";${{ steps.bin.outputs.path }}/x86"
+          cmake -S "${{ steps.src.outputs.path }}/cmake/test"     `
+              -DTEST_FULL=TRUE                                    `
+              -DTEST_STATIC=FALSE                                 `
+              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }}" `
+              -B build_x86 -A win32
+          cmake --build build_x86 --config Release
+          ctest --test-dir build_x86 --no-tests=error -C Release
+      - name: 'CMake (configure + build + tests) x64'
+        run: |
+          $env:PATH += ";${{ steps.bin.outputs.path }}/x86"
+          cmake -S "${{ steps.src.outputs.path }}/cmake/test"     `
+              -DTEST_FULL=TRUE                                    `
+              -DTEST_STATIC=FALSE                                 `
+              -DCMAKE_PREFIX_PATH="${{ steps.bin.outputs.path }}" `
+              -B build_x64 -A x64
+          cmake --build build_x64 --config Release
+          ctest --test-dir build_x64 --no-tests=error -C Release
