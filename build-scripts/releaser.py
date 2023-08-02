@@ -163,6 +163,16 @@ class Releaser:
         self._git_archive(out=tar_gz)
         self.artifacts["src-tar-gz"] = tar_gz
 
+    def create_xcframework(self):
+        # sdks = ["iphoneos", "appletvos"]
+        # target = self.project
+        # dmg_path
+        # configuration = "Release"
+        # target = "SDL3.dmg"
+        # cmd = ["xcodebuild", "-project", "Xcode/SDL/SDL.xcodeproj", "-target", target, "-configuration", configuration]
+        # self.executer.run(cmd)
+        raise NotImplementedError
+
     def build_vs(self, arch: str, platform: str, vs: VisualStudio, configuration: str="Release"):
         dll_path = self.root / f"VisualC/SDL/{platform}/{configuration}/{self.project}.dll"
         imp_path = self.root / f"VisualC/SDL/{platform}/{configuration}/{self.project}.lib"
@@ -293,7 +303,7 @@ def main(argv=None):
     if "xcframework" in args.actions:
         if platform.system() != "Darwin" and not args.dry:
             parser.error("xcframework artifact(s) can only be built on Darwin")
-        raise NotImplementedError
+            releaser.create_xcframework()
 
     if "win32" in args.actions:
         if platform.system() != "Windows" and not args.dry:
