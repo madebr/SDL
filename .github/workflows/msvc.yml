@@ -15,19 +15,23 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows (x64),          flags: -A x64,   project: VisualC/SDL.sln, projectflags: '/p:Platform=x64', artifact: 'SDL-VC-x64' }
-        - { name: Windows (x86),          flags: -A Win32, project: VisualC/SDL.sln, projectflags: '/p:Platform=Win32', artifact: 'SDL-VC-x86' }
-        - { name: Windows static VCRT (x64), flags: -A x64 -DSDL_FORCE_STATIC_VCRT=ON, artifact: 'SDL-VC-static-VCRT-x64' }
-        - { name: Windows static VCRT (x86), flags: -A Win32 -DSDL_FORCE_STATIC_VCRT=ON, artifact: 'SDL-VC-static-VCRT-x86' }
-        - { name: Windows (clang-cl x64), flags: -T ClangCL -A x64, artifact: 'SDL-clang-cl-x64' }
-        - { name: Windows (clang-cl x86), flags: -T ClangCL -A Win32, artifact: 'SDL-clang-cl-x86' }
-        - { name: Windows (ARM),          flags: -A ARM, artifact: 'SDL-VC-arm32', notests: true }
-        - { name: Windows (ARM64),        flags: -A ARM64, artifact: 'SDL-VC-arm64', notests: true }
-        - { name: UWP (x64),              flags: -A x64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0", nowerror: true, notests: true,
+        - { name: Windows (x64),              arch: 'x64', flags: -A x64,   project: VisualC/SDL.sln, projectflags: '/p:Platform=x64', artifact: 'SDL-VC-x64' }
+        - { name: Windows (x86),              arch: 'x86', flags: -A Win32, project: VisualC/SDL.sln, projectflags: '/p:Platform=Win32', artifact: 'SDL-VC-x86' }
+        - { name: Windows static VCRT (x64),  arch: 'x64', flags: -A x64 -DSDL_FORCE_STATIC_VCRT=ON, artifact: 'SDL-VC-static-VCRT-x64' }
+        - { name: Windows static VCRT (x86),  arch: 'x86', flags: -A Win32 -DSDL_FORCE_STATIC_VCRT=ON, artifact: 'SDL-VC-static-VCRT-x86' }
+        - { name: Windows (clang-cl x64),     arch: 'x64', flags: -T ClangCL -A x64, artifact: 'SDL-clang-cl-x64' }
+        - { name: Windows (clang-cl x86),     arch: 'x86', flags: -T ClangCL -A Win32, artifact: 'SDL-clang-cl-x86' }
+        - { name: Windows (ARM),              arch: 'arm32', flags: -A ARM, artifact: 'SDL-VC-arm32', notests: true }
+        - { name: Windows (ARM64),            arch: 'arm64', flags: -A ARM64, artifact: 'SDL-VC-arm64', notests: true }
+        - { name: UWP (x64),                  arch: 'x64', flags: -A x64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0", nowerror: true, notests: true,
             project: VisualC-WinRT/SDL-UWP.sln, projectflags: '/p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.17763.0', artifact: 'SDL-VC-UWP' }
 
     steps:
     - uses: actions/checkout@v3
+    - name: Download ProcDump
+      run: |
+        Invoke-WebRequest -URI "https://download.sysinternals.com/files/Procdump.zip" -OutFile "Procdump.zip"
+        Expand-Archive -Path Procdump.zip -DestinationPath ${{ github.workspace }}
     - name: Create CMake project using SDL as a subproject
       shell: python
       run: |
@@ -36,12 +40,22 @@ jobs:
         srcdir = r"${{ github.workspace }}".replace("\\", "/")
         builddir = f"{ srcdir }/build"
         os.makedirs(builddir)
+        procdump = ""
+        if "${{ matrix.platform.arch }}" == "x86":
+          procdump = f"{ srcdir }/procdump.exe"
+        elif "${{ matrix.platform.arch }}" == "x64":
+          procdump = f"{ srcdir }/procdump64.exe"
+        elif "${{ matrix.platform.arch }}" == "arm64":
+          procdump = f"{ srcdir }/procdump64a.exe"
+        if procdump:
+          procdump = f"{ procdump };-accepteula;-ma;-e;-x;" + r"${{ github.workspace }}".replace("\\", "\\\\")
         cmakelists_txt = textwrap.dedent(f"""\
           # Always build .PDB symbol file
           set(CMAKE_POLICY_DEFAULT_CMP0141 "NEW" CACHE STRING "MSVC debug information format flags are selected by an abstraction")
           set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "MSVC debug information format")
           set(CMAKE_EXE_LINKER_FLAGS "-DEBUG" CACHE STRING "Linker flags for executables")
           set(CMAKE_SHARED_LINKER_FLAGS "-DEBUG" CACHE STRING "Linker flag for shared libraries")
+          set(CMAKE_CROSSCOMPILING_EMULATOR "{ procdump }" )
           cmake_minimum_required(VERSION 3.0...3.25)
           project(sdl_user)
           enable_testing()
@@ -69,6 +83,7 @@ jobs:
       run: |
         cmake --build build/ --config Release --parallel
     - name: Run build-time tests
+      id: run-tests
       if: ${{ !matrix.platform.notests }}
       run: |
         $env:SDL_TESTS_QUICK=1
@@ -100,3 +115,9 @@ jobs:
         if-no-files-found: error
         name: ${{ matrix.platform.artifact }}
         path: build/dist/SDL3*
+    - uses: actions/upload-artifact@v3
+      if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+      with:
+        if-no-files-found: error
+        name: ${{ matrix.platform.artifact }}-dumps
+        path: ${{ github.workspace }}/*.dmp
