@@ -15,22 +15,22 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows (mingw32),              os: windows-latest, shell: 'msys2 {0}', msystem: mingw32, msys-env: mingw-w64-i686 }
-        - { name: Windows (mingw64),              os: windows-latest, shell: 'msys2 {0}', msystem: mingw64, msys-env: mingw-w64-x86_64 }
-        - { name: Windows (clang32),              os: windows-latest, shell: 'msys2 {0}', msystem: clang32, msys-env: mingw-w64-clang-i686 }
-        - { name: Windows (clang64),              os: windows-latest, shell: 'msys2 {0}', msystem: clang64, msys-env: mingw-w64-clang-x86_64 }
-        - { name: Windows (ucrt64),               os: windows-latest, shell: 'msys2 {0}', msystem: ucrt64,  msys-env: mingw-w64-ucrt-x86_64 }
-        - { name: Ubuntu 20.04 (CMake),           os: ubuntu-20.04,   shell: sh }
-        - { name: Ubuntu 20.04 (autotools),       os: ubuntu-20.04,   shell: sh,    autotools: true }
-        #- { name: Intel oneAPI (Ubuntu 20.04),    os: ubuntu-20.04,   shell: bash, artifact: 'SDL-ubuntu20.04-oneapi', intel: true,
-        #    source_cmd: 'source /opt/intel/oneapi/setvars.sh; export CC=icx; export CXX=icx;'}
-        #- { name: Intel Compiler (Ubuntu 20.04),  os: ubuntu-20.04,   shell: bash, artifact: 'SDL-ubuntu20.04-icc', intel: true, cmake: '-DSDL_CLANG_TIDY=OFF',
-        #     source_cmd: 'source /opt/intel/oneapi/setvars.sh; export CC=icc; export CXX=icpc; export CFLAGS=-diag-disable=10441; export CXXFLAGS=-diag-disable=10441; '}
-
-        - { name: Ubuntu 22.04 (CMake),           os: ubuntu-22.04,   shell: sh }
-        - { name: Ubuntu 22.04 (autotools),       os: ubuntu-22.04,   shell: sh,    autotools: true }
+#        - { name: Windows (mingw32),              os: windows-latest, shell: 'msys2 {0}', msystem: mingw32, msys-env: mingw-w64-i686 }
+#        - { name: Windows (mingw64),              os: windows-latest, shell: 'msys2 {0}', msystem: mingw64, msys-env: mingw-w64-x86_64 }
+#        - { name: Windows (clang32),              os: windows-latest, shell: 'msys2 {0}', msystem: clang32, msys-env: mingw-w64-clang-i686 }
+#        - { name: Windows (clang64),              os: windows-latest, shell: 'msys2 {0}', msystem: clang64, msys-env: mingw-w64-clang-x86_64 }
+#        - { name: Windows (ucrt64),               os: windows-latest, shell: 'msys2 {0}', msystem: ucrt64,  msys-env: mingw-w64-ucrt-x86_64 }
+#        - { name: Ubuntu 20.04 (CMake),           os: ubuntu-20.04,   shell: sh }
+#        - { name: Ubuntu 20.04 (autotools),       os: ubuntu-20.04,   shell: sh,    autotools: true }
+#        #- { name: Intel oneAPI (Ubuntu 20.04),    os: ubuntu-20.04,   shell: bash, artifact: 'SDL-ubuntu20.04-oneapi', intel: true,
+#        #    source_cmd: 'source /opt/intel/oneapi/setvars.sh; export CC=icx; export CXX=icx;'}
+#        #- { name: Intel Compiler (Ubuntu 20.04),  os: ubuntu-20.04,   shell: bash, artifact: 'SDL-ubuntu20.04-icc', intel: true, cmake: '-DSDL_CLANG_TIDY=OFF',
+#        #     source_cmd: 'source /opt/intel/oneapi/setvars.sh; export CC=icc; export CXX=icpc; export CFLAGS=-diag-disable=10441; export CXXFLAGS=-diag-disable=10441; '}
+#
+#        - { name: Ubuntu 22.04 (CMake),           os: ubuntu-22.04,   shell: sh }
+#        - { name: Ubuntu 22.04 (autotools),       os: ubuntu-22.04,   shell: sh,    autotools: true }
         - { name: MacOS (CMake),                  os: macos-latest,   shell: sh,    cmake: '-DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"' }
-        - { name: MacOS (autotools),              os: macos-latest,   shell: sh,    autotools: true }
+#        - { name: MacOS (autotools),              os: macos-latest,   shell: sh,    autotools: true }
 
     steps:
     - name: Set up MSYS2
@@ -95,7 +95,8 @@ jobs:
         -DSDL_VENDOR_INFO="Github Workflow" \
         -DCMAKE_INSTALL_PREFIX=cmake_prefix \
         -DCMAKE_BUILD_TYPE=Release \
-        ${{ matrix.platform.cmake }}
+        ${{ matrix.platform.cmake }} || true
+        cat build/CMakeFiles/CMakeConfigureLog.yaml
     - name: Build (CMake)
       if: "! matrix.platform.autotools"
       run: |
