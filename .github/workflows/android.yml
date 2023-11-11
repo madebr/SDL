@@ -44,6 +44,7 @@ jobs:
           cmake -S . -B build \
             -Wdeprecated -Wdev -Werror \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup_ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--no-undefined-version" \
             -DSDL_WERROR=ON \
             -DSDL_TESTS=ON \
             -DSDL_INSTALL_TESTS=ON \
