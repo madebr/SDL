@@ -20,11 +20,11 @@ jobs:
               install-cmd: 'sudo pkg install -y',
               packages: 'cmake ninja pkgconf libXcursor libXext libXinerama libXi libXfixes libXrandr libXScrnSaver libXxf86vm wayland wayland-protocols libxkbcommon mesa-libs libglvnd evdev-proto libinotify alsa-lib jackit pipewire pulseaudio sndio dbus zh-fcitx ibus libudev-devd'
             }
-          - { name: NetBSD,   os: netbsd,   os-version: 9.3,  os-arch: x86-64,  artifact: SDL-netbsd-x64,
-              setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "$PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
+          - { name: NetBSD,   os: netbsd,   os-version: 10.0,  os-arch: x86-64,  artifact: SDL-netbsd-x64,
+              setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
               pkg: 'pkg_add',
               install-cmd: 'sudo -E pkgin -y install',
-              packages: 'gcc13 cmake pkgconf ninja-build alsa-lib jack pulseaudio MesaLib wayland wayland-protocols libxkbcommon libXcursor libXi libXinerama libXrandr libXScrnSaver libiconv'
+              packages: 'gcc13 cmake pkgconf ninja-build alsa-lib jack pulseaudio MesaLib wayland wayland-protocols libxkbcommon libXcursor x11-links libXScrnSaver libiconv'
             }
     steps:
     - uses: actions/checkout@v3
