@@ -15,12 +15,17 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-#          - { name: FreeBSD,  os: freebsd, os-version: 13.2,  os-arch: x86-64, artifact: SDL-freebsd-x64,
-#               setup: 'sudo pkg update;', pkg: 'pgg', install-cmd: 'sudo pkg install -y' }
-          - { name: NetBSD,   os: netbsd,  os-version: 9.3,   os-arch: x86-64, artifact: SDL-netbsd-x64,
-              setup: 'PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";PKG_PATH="https://cdn.NetBSD.org/pub/pkgsrc/packages/$(uname)/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";export PATH PKG_PATH;echo "$PKG_PATH=$PKG_PATH";sudo pkg_add pkgin;sudo pkgin update',
-              pkg: 'pkg_add', install-cmd: 'sudo pkg_add' }
-
+          - { name: FreeBSD,  os: freebsd,  os-version: 13.2, os-arch: x86-64,  artifact: SDL-freebsd-x64,
+              setup: 'sudo pkg update;',
+              install-cmd: 'sudo pkg install -y',
+              packages: 'cmake ninja pkgconf libXcursor libXext libXinerama libXi libXfixes libXrandr libXScrnSaver libXxf86vm wayland wayland-protocols libxkbcommon mesa-libs libglvnd evdev-proto libinotify alsa-lib jackit pipewire pulseaudio sndio dbus zh-fcitx ibus libudev-devd'
+            }
+          - { name: NetBSD,   os: netbsd,   os-version: 9.3,  os-arch: x86-64,  artifact: SDL-netbsd-x64,
+              setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "$PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
+              pkg: 'pkg_add',
+              install-cmd: 'sudo -E pkgin -y install',
+              packages: 'cmake pkgconf ninja wayland wayland-protocols libxkbcommon libsamplerate x11-links'
+            }
     steps:
     - uses: actions/checkout@v3
     - name: Build
@@ -31,34 +36,7 @@ jobs:
         version: ${{ matrix.platform.os-version }}
         run: |
           ${{ matrix.platform.setup }}
-          ${{ matrix.platform.install-cmd }} \
-              cmake \
-              ninja \
-              pkgconf \
-              libXcursor \
-              libXext \
-              libXinerama \
-              libXi \
-              libXfixes \
-              libXrandr \
-              libXScrnSaver \
-              libXxf86vm \
-              wayland \
-              wayland-protocols \
-              libxkbcommon \
-              mesa-libs \
-              libglvnd \
-              evdev-proto \
-              libinotify \
-              alsa-lib \
-              jackit \
-              pipewire \
-              pulseaudio \
-              sndio \
-              dbus \
-              zh-fcitx \
-              ibus \
-              libudev-devd
+          ${{ matrix.platform.install-cmd }} ${{ matrix.platform.packages }} \
           cmake -S . -B build -GNinja  \
             -Wdeprecated -Wdev -Werror \
             -DCMAKE_BUILD_TYPE=Release \
