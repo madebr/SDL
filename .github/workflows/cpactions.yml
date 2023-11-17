@@ -24,7 +24,7 @@ jobs:
               setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "$PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
               pkg: 'pkg_add',
               install-cmd: 'sudo -E pkgin -y install',
-              packages: 'cmake pkgconf ninja wayland wayland-protocols libxkbcommon libsamplerate meta-pkgs/modular-xorg x11-links'
+              packages: 'gcc13 cmake pkgconf ninja-build audio/alsa-lib audio/jack audio/pulseaudio graphics/MesaLib devel/wayland devel/wayland-protocols x11/libxkbcommon x11/libXcursor x11/libXi x11/libXinerama x11/libXrandr x11/libXScrnSaver converters/libiconv'
             }
     steps:
     - uses: actions/checkout@v3
