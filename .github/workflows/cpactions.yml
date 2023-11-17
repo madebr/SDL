@@ -24,7 +24,7 @@ jobs:
               setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "$PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
               pkg: 'pkg_add',
               install-cmd: 'sudo -E pkgin -y install',
-              packages: 'cmake pkgconf ninja wayland wayland-protocols libxkbcommon libsamplerate'  # FIXME: x11-links causes error: "the following packages have unmet requirements:   x11-links-1.35"
+              packages: 'cmake pkgconf ninja wayland wayland-protocols libxkbcommon libsamplerate meta-pkgs/modular-xorg x11-links'
             }
     steps:
     - uses: actions/checkout@v3
