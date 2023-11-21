@@ -22,7 +22,7 @@ jobs:
           - { name: NetBSD,   os: netbsd,   os-version: 9.3,  os-arch: x86-64,  artifact: SDL-netbsd-x64,
               setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "PKG_PATH=$PKG_PATH";echo "uname -a -> \"$(uname -a)\"";sudo -E pkgin clean;sudo -E pkgin update',
               pkg: 'pkg_add',
-              install-cmd: 'sudo -E pkgin -y install gcc13-libs && sudo -E pkgin -y install gcc13 cmake pkgconf ninja-build alsa-lib jack pulseaudio MesaLib wayland wayland-protocols libxkbcommon libXcursor libXScrnSaver libiconv',
+              install-cmd: 'sudo -E pkgin -y install cmake pkgconf ninja-build alsa-lib jack pulseaudio libiconv wayland wayland-protocols',  # MesaLib libxkbcommon libXcursor libXScrnSaver',
             }
     steps:
     - uses: actions/checkout@v3
