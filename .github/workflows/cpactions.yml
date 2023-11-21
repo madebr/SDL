@@ -24,7 +24,7 @@ jobs:
               setup: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo "PKG_PATH=$PKG_PATH";sudo -E pkgin clean;sudo -E pkgin update',
               pkg: 'pkg_add',
               install-cmd: 'sudo -E pkgin -y install',
-              packages: 'gcc13 gcc13-libs cmake pkgconf ninja-build alsa-lib jack pulseaudio MesaLib wayland wayland-protocols libxkbcommon libXcursor x11-links libXScrnSaver libiconv'
+              packages: 'gcc13-libs gcc13 cmake pkgconf ninja-build alsa-lib jack pulseaudio MesaLib wayland wayland-protocols libxkbcommon libXcursor libXScrnSaver libiconv'
             }
     steps:
     - uses: actions/checkout@v3
