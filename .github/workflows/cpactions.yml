@@ -21,7 +21,7 @@ jobs:
             }
           - { name: NetBSD,   os: netbsd,   os-version: 9.3,  os-arch: x86-64,  artifact: SDL-netbsd-x64,
               setup-cmd: 'export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH";export PKG_PATH="https://cdn.netBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r|cut -f "1 2" -d.)/All/";echo -e "PKG_PATH=$PKG_PATH\nPATH=$PATH";echo "uname -a -> \"$(uname -a)\"";sudo -E pkgin clean;sudo -E pkgin update',
-              install-cmd: 'sudo -E sysctl -w security.pax.aslr.enabled=0 && sudo -E sysctl -w security.pax.aslr.global=0 && sudo -E pkgin -y install cmake pkgconf ninja-build alsa-lib jack pulseaudio libiconv wayland wayland-protocols',
+              install-cmd: 'sudo sysctl -w security.pax.aslr.enabled=0 && sudo sysctl -w security.pax.aslr.global=0 && sudo -E pkgin -y install cmake pkgconf ninja-build alsa-lib jack pulseaudio libiconv wayland wayland-protocols',
             }
     steps:
     - uses: actions/checkout@v3
