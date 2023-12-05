@@ -38,6 +38,8 @@ jobs:
         os.makedirs(builddir)
         cmakelists_txt = textwrap.dedent(f"""\
           # Always build .PDB symbol file
+          set(CMAKE_C_FLAGS "/analyze")
+          set(CMAKE_CXX_FLAGS "/analyze")
           set(CMAKE_POLICY_DEFAULT_CMP0141 "NEW" CACHE STRING "MSVC debug information format flags are selected by an abstraction")
           set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "MSVC debug information format")
           set(CMAKE_EXE_LINKER_FLAGS "-DEBUG" CACHE STRING "Linker flags for executables")
