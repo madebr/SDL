@@ -32,19 +32,18 @@
 #include "../SDL_sysrender.h"
 #include "../SDL_d3dmath.h"
 
-/* Use C style c3d12 interfaces */
-#define CINTERFACE
-/* Use macros for declaring c-like d3d12 functions */
-#ifndef COBJMACROS
-#define COBJMACROS
-#endif
-
 #if defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
 #include "SDL_render_d3d12_xbox.h"
 #ifndef D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
 #define D3D12_TEXTURE_DATA_PITCH_ALIGNMENT 256
 #endif
 #else
+/* Use C style c3d12 interfaces */
+#define CINTERFACE
+/* Use macros for declaring c-like d3d12 functions */
+#ifndef COBJMACROS
+#define COBJMACROS
+#endif
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
@@ -65,6 +64,17 @@
 #define D3D_GUID(X)                   &(X)
 #endif
 
+#if defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
+#define SAFE_RELEASE(X) \
+    if (X) {            \
+        (X)->Release(); \
+        X = NULL;       \
+    }
+#define D3D_CALL(THIS, FUNC, ...)             (THIS)->FUNC(__VA_ARGS__)
+#define D3D_CALL_RET(THIS, FUNC, RETVAL, ...) *(RETVAL) = (THIS)->FUNC(__VA_ARGS__)
+/* DXGI_PRESENT flags are removed on Xbox */
+#define DXGI_PRESENT_ALLOW_TEARING 0
+#else
 #define SAFE_RELEASE(X)          \
     if (X) {                     \
         (X)->lpVtbl->Release(X); \
@@ -72,6 +82,7 @@
     }
 #define D3D_CALL(THIS, FUNC, ...)     (THIS)->lpVtbl->FUNC((THIS), ##__VA_ARGS__)
 #define D3D_CALL_RET(THIS, FUNC, ...) (THIS)->lpVtbl->FUNC((THIS), ##__VA_ARGS__)
+#endif
 
 /*
  * Older Windows SDK headers declare some d3d12 functions with the wrong function prototype.
@@ -81,9 +92,10 @@
  * (and 9 more)
  * */
 
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) || defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
 /*
  * MinGW has correct function prototypes in the vtables, but defines wrong functions
+ * Xbox just needs these macros defined as used below (because CINTERFACE doesn't exist)
  */
 
 #undef ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart
