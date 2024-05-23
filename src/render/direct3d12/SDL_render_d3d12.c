@@ -32,6 +32,9 @@
 #include "../SDL_sysrender.h"
 #include "../SDL_d3dmath.h"
 
+/* Use C style c3d12 interfaces */
+#define CINTERFACE
+
 #if defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
 #include "SDL_render_d3d12_xbox.h"
 #ifndef D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
@@ -53,15 +56,11 @@
 #endif
 
 #ifdef __cplusplus
-#define SAFE_RELEASE(X) \
-    if (X) {            \
-        (X)->Release(); \
-        X = NULL;       \
-    }
-#define D3D_CALL(THIS, FUNC, ...)             (THIS)->FUNC(__VA_ARGS__)
-#define D3D_CALL_RET(THIS, FUNC, RETVAL, ...) *(RETVAL) = (THIS)->FUNC(__VA_ARGS__)
 #define D3D_GUID(X)                           (X)
 #else
+#define D3D_GUID(X)                   &(X)
+#endif
+
 #define SAFE_RELEASE(X)          \
     if (X) {                     \
         (X)->lpVtbl->Release(X); \
@@ -69,8 +68,6 @@
     }
 #define D3D_CALL(THIS, FUNC, ...)     (THIS)->lpVtbl->FUNC((THIS), ##__VA_ARGS__)
 #define D3D_CALL_RET(THIS, FUNC, ...) (THIS)->lpVtbl->FUNC((THIS), ##__VA_ARGS__)
-#define D3D_GUID(X)                   &(X)
-#endif
 
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
