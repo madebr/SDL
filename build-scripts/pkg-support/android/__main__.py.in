@@ -92,9 +92,8 @@ def main():
                 jarpath = javadir / f"{project_name}-{project_version}-sources.jar"
                 read_zipfile_and_write(jarpath, zippath)
             elif zippath == "classes-doc.jar":
-                data = zf.read(zippath)
-                with zipfile.ZipFile(io.BytesIO(data)) as doc_zf:
-                    doc_zf.extractall(javadocdir)
+                jarpath = javadocdir / f"{project_name}-{project_version}-javadoc.jar"
+                read_zipfile_and_write(jarpath, zippath)
 
     print("... done")
     return 0

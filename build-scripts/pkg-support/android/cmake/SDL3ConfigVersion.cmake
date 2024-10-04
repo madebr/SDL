@@ -4,7 +4,7 @@
 # This file is meant to be placed in a lib/cmake/SDL3 subfolder of a reconstructed Android SDL3 SDK
 
 if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../../include/SDL3/SDL_version.h")
-    message(AUTHOR_WARNING "Could not find SDL3/SDL_version.h. This script is meant to be placed in the root of SDL3-devel-3.x.y-VC")
+    message(AUTHOR_WARNING "Could not find SDL3/SDL_version.h. This script is meant to be placed in lib/cmake/SDL3 of a reconstructed ANdroid SDL3 SDK")
     return()
 endif()
 

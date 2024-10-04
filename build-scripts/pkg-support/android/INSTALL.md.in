@@ -1,4 +1,3 @@
-
 This Android archive allows use of @PROJECT_NAME@ in your Android project, without needing to copy any SDL source.
 For integration with CMake/ndk-build, it uses [prefab](https://google.github.io/prefab/).
 
@@ -24,7 +23,11 @@ find_package(@PROJECT_NAME@ REQUIRED CONFIG)
 target_link_libraries(yourgame PRIVATE @PROJECT_NAME@::@PROJECT_NAME@)
 ```
 
-If you're using ndk-build, add the following somewhere after `LOCAL_MODULE := yourgame` to your `Android.mk` or `Application.mk`:
+If you use ndk-build, add the following before `include $(BUILD_SHARED_LIBRARY)` to your `Android.mk`:
+```
+LOCAL_SHARED_LIBARARIES := SDL3 SDL3-Headers
+```
+And add the following at the bottom:
 ```
 # https://google.github.io/prefab/build-systems.html
 
