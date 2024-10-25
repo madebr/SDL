@@ -68,6 +68,57 @@ struct SDL_CursorData
     int w, h;
 };
 
+// EGL function
+#define OPENVR_EGL_SYMBOLS(X) \
+    X(PFNEGLINITIALIZEPROC, eglInitialize) \
+    X(PFNEGLBINDAPIPROC, eglBindAPI) \
+    X(PFNEGLCREATECONTEXTPROC, eglCreateContext) \
+    X(PFNEGLGETERRORPROC, eglGetError) \
+    X(PFNEGLMAKECURRENTPROC, eglMakeCurrent) \
+    X(PFNEGLTERMINATEPROC, eglTerminate) \
+    X(PFNEGLGETDISPLAYPROC, eglGetDisplay)
+
+#define X_STATIC_VARIABLE(T, N) static T EGL_##N;
+OPENVR_EGL_SYMBOLS(X_STATIC_VARIABLE)
+#undef X_STATIC_VARIABLE
+
+#ifdef SDL_VIDEO_DRIVER_OPENVR_DYNAMIC_EGL
+static SDL_SharedObject *openvr_EGL_handle;
+#endif
+
+static void unload_egl_symbols(void){
+#ifdef SDL_VIDEO_DRIVER_OPENVR_DYNAMIC_EGL
+    SDL_UnloadObject(openvr_EGL_handle);
+    openvr_EGL_handle = NULL;
+#endif
+}
+
+static bool load_egl_symbols(void)
+{
+#ifdef SDL_VIDEO_DRIVER_OPENVR_DYNAMIC_EGL
+    if (openvr_EGL_handle) {
+        return true;
+    }
+    openvr_EGL_handle = SDL_LoadObject(SDL_VIDEO_DRIVER_OPENVR_DYNAMIC_EGL);
+    if (!openvr_EGL_handle) {
+        return false;
+    }
+#define X_LOAD_EGL_FUNCTION(T, N) \
+    EGL_##N = (T) SDL_LoadFunction(openvr_EGL_handle, #N); \
+    if (!(EGL_##N)) { \
+        unload_egl_symbols(); return SDL_SetError("Missing symbol from %s: %s", SDL_VIDEO_DRIVER_OPENVR_DYNAMIC_EGL, #N); \
+    }
+    OPENVR_EGL_SYMBOLS(X_LOAD_EGL_FUNCTION);
+#undef X_LOAD_EGL_FUNCTION
+#else
+#define X_LOAD_EGL_FUNCTION(T, N) EGL_##N = N;
+    OPENVR_EGL_SYMBOLS(X_LOAD_EGL_FUNCTION);
+#undef X_LOAD_EGL_FUNCTION
+#endif
+    return true;
+}
+#undef OPENVR_EGL_SYMBOLS
+
 // GL Extensions for functions we will be using.
 static void (APIENTRY *ov_glGenFramebuffers)(GLsizei n, GLuint *framebuffers);
 static void (APIENTRY *ov_glGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
@@ -182,7 +233,6 @@ static bool OPENVR_InitializeOverlay(SDL_VideoDevice *_this, SDL_Window *window)
 static bool OPENVR_VideoInit(SDL_VideoDevice *_this)
 {
     SDL_VideoData *data = (SDL_VideoData *)_this->internal;
-
     const char * hintWidth = SDL_GetHint("SDL_DEFAULT_WIDTH");
     const char * hintHeight = SDL_GetHint("SDL_DEFAULT_HEIGHT");
     const char * hintFPS = SDL_GetHint("SDL_DEFAULT_FPS");
@@ -191,6 +241,11 @@ static bool OPENVR_VideoInit(SDL_VideoDevice *_this)
     int fps = hintFPS ? SDL_atoi(hintFPS) : 0;
 
     SDL_VideoDisplay display;
+
+    if (!load_egl_symbols()) {
+        return false;
+    }
+
     SDL_zero(display);
     display.desktop_mode.format = SDL_PIXELFORMAT_RGBA32;
     display.desktop_mode.w = OPENVR_DEFAULT_WIDTH;
@@ -221,6 +276,8 @@ static void OPENVR_VideoQuit(SDL_VideoDevice *_this)
     if (videodata->bDidCreateOverlay && videodata->overlayID != 0) {
         videodata->oOverlay->DestroyOverlay(videodata->overlayID);
     }
+
+    unload_egl_symbols();
 }
 
 static void OPENVR_Destroy(SDL_VideoDevice *device)
@@ -966,7 +1023,7 @@ static bool SDL_EGL_InitInternal(SDL_VideoData * vd)
     EGLConfig eglCfg=NULL;
     EGLBoolean b;
 
-    vd->eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    vd->eglDpy = EGL_eglGetDisplay(EGL_DEFAULT_DISPLAY);
 #ifdef DEBUG_OPENVR
     SDL_Log("EGL Display: %p\n", vd->eglDpy);
 #endif
@@ -975,21 +1032,21 @@ static bool SDL_EGL_InitInternal(SDL_VideoData * vd)
         return SDL_SetError("No EGL Display");
     }
 
-    b = eglInitialize(vd->eglDpy, &major, &minor);
+    b = EGL_eglInitialize(vd->eglDpy, &major, &minor);
     if (!b) {
         return SDL_SetError("eglInitialize failed");
     }
 
-    eglBindAPI(EGL_OPENGL_API);
+    EGL_eglBindAPI(EGL_OPENGL_API);
 #ifdef DEBUG_OPENVR
     SDL_Log("EGL Major Minor: %d %d = %d", major, minor, b);
 #endif
 
-    vd->eglCtx = eglCreateContext(vd->eglDpy, eglCfg, EGL_NO_CONTEXT, context_attribs);
+    vd->eglCtx = EGL_eglCreateContext(vd->eglDpy, eglCfg, EGL_NO_CONTEXT, context_attribs);
 
 #ifdef DEBUG_OPENVR
     {
-        int err = eglGetError();
+        int err = EGL_eglGetError();
         if (err != EGL_SUCCESS) {
             return SDL_SetError("EGL Error after eglCreateContext %d", err);
         }
@@ -1000,7 +1057,7 @@ static bool SDL_EGL_InitInternal(SDL_VideoData * vd)
         return SDL_SetError("No EGL context available");
     }
 
-    eglMakeCurrent(vd->eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, vd->eglCtx);
+    EGL_eglMakeCurrent(vd->eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, vd->eglCtx);
 
     return true;
 }
@@ -1062,7 +1119,7 @@ static SDL_GLContext OVR_EGL_CreateContext(SDL_VideoDevice *_this, SDL_Window * 
 static bool OVR_EGL_MakeCurrent(SDL_VideoDevice *_this, SDL_Window * wnd, SDL_GLContext context)
 {
     SDL_VideoData *videodata = (SDL_VideoData *)_this->internal;
-    eglMakeCurrent(videodata->eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, videodata->eglCtx);
+    EGL_eglMakeCurrent(videodata->eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, videodata->eglCtx);
     return true;
 }
 
@@ -1087,7 +1144,7 @@ static bool OVR_EGL_DestroyContext(SDL_VideoDevice *_this, SDL_GLContext context
 {
     SDL_VideoData *videodata = (SDL_VideoData *)_this->internal;
     if (videodata->eglDpy) {
-        eglTerminate(videodata->eglDpy);
+        EGL_eglTerminate(videodata->eglDpy);
     }
     return true;
 }
