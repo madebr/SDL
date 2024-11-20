@@ -48,7 +48,7 @@ class SDLSeleniumTestDriver:
             raise ValueError(f"Invalid {browser=}")
 
         options = [
-            "--headless",
+            "--headless=new",
         ]
         for o in options:
             driver_options.add_argument(o)

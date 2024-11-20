@@ -62,14 +62,14 @@ jobs:
       - name: 'Add chrome to PATH'
         if: ${{ matrix.platform.platform == 'emscripten' }}
         run: |
+          set -ex
           chrome_dir="$(dirname "${{ steps.setup-chrome.outputs.chrome-path }}")"
           chromedriver_dir="$(dirname "${{ steps.setup-chrome.outputs.chromedriver-path }}")"
           echo "CHROME_BINARY=${{ steps.setup-chrome.outputs.chrome-path }}" >>$GITHUB_ENV
           echo "CHROMEDRIVER_BINARY=${{ steps.setup-chrome.outputs.chromedriver-path }}" >>$GITHUB_ENV
-          echo "chrome_dir=${chrome_dir}"
-          echo "chromedriver_dir=${chromedriver_dir}"
-          echo "${chrome_dir}" >>${GITHUB_PATH}
-          echo "${chromedriver_dir}" >>${GITHUB_PATH}
+          echo "CHROME_PATHS=${chrome_dir}:${chromedriver_dir}" >>$GITHUB_ENV
+          echo "${chrome_dir}" >> "$GITHUB_PATH"
+          echo "${chromedriver_dir}" >> "$GITHUB_PATH"
       - uses: nttld/setup-ndk@v1
         if: ${{ matrix.platform.android-ndk }}
         id: setup-ndk

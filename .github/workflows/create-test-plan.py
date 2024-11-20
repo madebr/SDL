@@ -556,6 +556,8 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
             ))
             pretest_cmd.extend((
                 "# Start local HTTP server",
+                "export PATH=$CHROME_PATHS:$PATH",
+                "echo \"PATH=$PATH\"",
                 "cmake --build build --target serve-sdl-tests --verbose &",
                 "chrome --version",
                 "chromedriver --version",
