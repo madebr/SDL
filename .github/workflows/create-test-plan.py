@@ -98,6 +98,7 @@ class JobSpec:
     clang_cl: bool = False
     gdk: bool = False
     vita_gles: Optional[VitaGLES] = None
+    libc: bool = True
 
 
 JOB_SPECS = {
@@ -106,6 +107,8 @@ JOB_SPECS = {
     "msys2-clang32": JobSpec(name="Windows (msys2, clang32)",               os=JobOs.WindowsLatest, platform=SdlPlatform.Msys2,       artifact="SDL-mingw32-clang",      msys2_platform=Msys2Platform.Clang32, ),
     "msys2-clang64": JobSpec(name="Windows (msys2, clang64)",               os=JobOs.WindowsLatest, platform=SdlPlatform.Msys2,       artifact="SDL-mingw64-clang",      msys2_platform=Msys2Platform.Clang64, ),
     "msys2-ucrt64": JobSpec(name="Windows (msys2, ucrt64)",                 os=JobOs.WindowsLatest, platform=SdlPlatform.Msys2,       artifact="SDL-mingw64-ucrt",       msys2_platform=Msys2Platform.Ucrt64, ),
+    "msvc-x64-nolibc": JobSpec(name="Windows (MSVC, x64, nolibc)",          os=JobOs.WindowsLatest, platform=SdlPlatform.Msvc,        artifact="SDL-VC-x64-nolibc",      msvc_arch=MsvcArch.X64,   libc=False,  ),
+    "msvc-arm64-nolibc": JobSpec(name="Windows (MSVC, ARM64, nolibc)",      os=JobOs.WindowsLatest, platform=SdlPlatform.Msvc,        artifact="SDL-VC-arm64-nolibc",    msvc_arch=MsvcArch.Arm64, libc=False,  ),
     "msvc-x64": JobSpec(name="Windows (MSVC, x64)",                         os=JobOs.WindowsLatest, platform=SdlPlatform.Msvc,        artifact="SDL-VC-x64",             msvc_arch=MsvcArch.X64,   msvc_project="VisualC/SDL.sln", ),
     "msvc-x86": JobSpec(name="Windows (MSVC, x86)",                         os=JobOs.WindowsLatest, platform=SdlPlatform.Msvc,        artifact="SDL-VC-x86",             msvc_arch=MsvcArch.X86,   msvc_project="VisualC/SDL.sln", ),
     "msvc-clang-x64": JobSpec(name="Windows (MSVC, clang-cl x64)",          os=JobOs.WindowsLatest, platform=SdlPlatform.Msvc,        artifact="SDL-clang-cl-x64",       msvc_arch=MsvcArch.X64,   clang_cl=True, ),
@@ -324,6 +327,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
     win32 = spec.platform in (SdlPlatform.Msys2, SdlPlatform.Msvc)
     fpic = None
     build_parallel = True
+    job.cmake_arguments.append(f"-DSDL_LIBC={'ON' if spec.libc else 'OFF'}")
     if spec.lean:
         job.cppflags.append("-DSDL_LEAN_AND_MEAN=1")
     if win32:
