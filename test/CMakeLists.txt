@@ -13,6 +13,8 @@ include(CheckStructHasMember)
 include(CMakePushCheckState)
 include(sdlcompilers)
 
+set(SDL_TEST_INSTALL_DIR "${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL3")
+
 find_package(Python3 COMPONENTS Interpreter)
 if(NOT PYTHON3_EXECUTABLE)
     set(PYTHON3_EXECUTABLE "python3")
@@ -571,8 +573,37 @@ set(TESTS_ENVIRONMENT
     "SDL_ASSERT=abort"
 )
 
+if(SDL_INSTALL_TESTS)
+    if(IS_ABSOLUTE "${SDL_TEST_INSTALL_DIR}")
+        file(RELATIVE_PATH sdl_test_prefix "${SDL_TEST_INSTALL_DIR}" "${CMAKE_INSTALL_PREFIX}")
+    else()
+        file(RELATIVE_PATH sdl_test_prefix "${CMAKE_INSTALL_PREFIX}/${SDL_TEST_INSTALL_DIR}" "${CMAKE_INSTALL_PREFIX}")
+    endif()
+    set(ctest_install_contents "set(SDL_TEST_DIR \"\${CMAKE_CURRENT_LIST_DIR}\")\n")
+    string(APPEND ctest_install_contents "get_filename_component(SDL_PREFIX \"\${SDL_TEST_DIR}/${sdl_test_prefix}\" ABSOLUTE)\n")
+    string(APPEND ctest_install_contents "function(add_sdl_test TEST)\n")
+    string(APPEND ctest_install_contents "  cmake_parse_arguments(ast \"\" \"TIMEOUT\" \"COMMAND;ENVIRONMENT\" \${ARGN})\n")
+    string(APPEND ctest_install_contents "  add_test(\${TEST} \${ast_COMMAND})\n")
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES WORKING_DIRECTORY \"\${SDL_TEST_DIR}\")\n")
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES ENVIRONMENT \"\${ast_ENVIRONMENT}\")\n")
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES TIMEOUT \"\${ast_TIMEOUT}\")\n")
+    if(WIN32)
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES ENVIRONMENT_MODIFICATION \"PATH=path_list_prepend:\${SDL_PREFIX}/${CMAKE_INSTALL_BINDIR}\")\n")
+    elseif(APPLE)
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES ENVIRONMENT_MODIFICATION \"DYLD_LIBRARY_PATH=path_list_prepend:\${SDL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\")\n")
+    else()
+    string(APPEND ctest_install_contents "  set_tests_properties(\${TEST} PROPERTIES ENVIRONMENT_MODIFICATION \"LD_LIBRARY_PATH=path_list_prepend:\${SDL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\")\n")
+    endif()
+    string(APPEND ctest_install_contents "  if(ast_TRACKMEM)\n")
+    string(APPEND ctest_install_contents "    set_tests_properties(\${TEST} PROPERTIES FAIL_REGULAR_EXPRESSION \"Total: [0-9]+\\\\.[0-9]+ Kb in [1-9][0-9]* allocations\")\n")
+    string(APPEND ctest_install_contents "  endif()\n")
+    string(APPEND ctest_install_contents "endfunction()\n")
+    string(APPEND ctest_install_contents "\n")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile_install.cmake.in" "${ctest_install_contents}")
+endif()
+
 function(add_sdl_test TEST TARGET)
-    cmake_parse_arguments(ast "INSTALL" "" "" ${ARGN})
+    cmake_parse_arguments(ast "INSTALL" "" "ENVIRONMENT" ${ARGN})
     get_property(noninteractive TARGET ${TARGET} PROPERTY SDL_NONINTERACTIVE)
     if(noninteractive)
         if(EMSCRIPTEN)
@@ -611,7 +642,7 @@ function(add_sdl_test TEST TARGET)
         if(NOT notrackmem)
             set_property(TEST ${TEST} PROPERTY FAIL_REGULAR_EXPRESSION "Total: [0-9]+\\.[0-9]+ Kb in [1-9][0-9]* allocations")
         endif()
-        set_tests_properties(${TEST} PROPERTIES ENVIRONMENT "${TESTS_ENVIRONMENT}")
+        set_tests_properties(${TEST} PROPERTIES ENVIRONMENT "${TESTS_ENVIRONMENT};${ast_ENVIRONMENT}")
         if(EMSCRIPTEN AND uses_threads)
             set_tests_properties(${TEST} PROPERTIES DISABLED 1)
         endif()
@@ -621,17 +652,23 @@ function(add_sdl_test TEST TARGET)
         endif()
         math(EXPR noninteractive_timeout "${noninteractive_timeout}*${SDLTEST_TIMEOUT_MULTIPLIER}")
         set_tests_properties(${TEST} PROPERTIES TIMEOUT "${noninteractive_timeout}")
+        if(TARGET pretest AND NOT "${TARGET}" MATCHES "pretest")
+            set_property(TEST ${TEST} APPEND PROPERTY DEPENDS pretest)
+        endif()
+        get_property(installed_args TARGET ${TARGET} PROPERTY SDL_INSTALLED_ARGUMENTS)
         if(ast_INSTALL AND SDL_INSTALL_TESTS)
             set(exe ${TARGET})
             set(installedtestsdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/installed-tests/SDL3")
             configure_file(template.test.in "${exe}.test" @ONLY)
             install(
-                    FILES "${CMAKE_CURRENT_BINARY_DIR}/${exe}.test"
-                    DESTINATION ${CMAKE_INSTALL_DATADIR}/installed-tests/SDL3
+                FILES "${CMAKE_CURRENT_BINARY_DIR}/${exe}.test"
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/installed-tests/SDL3
             )
         endif()
-        if(TARGET pretest AND NOT "${TARGET}" MATCHES "pretest")
-            set_property(TEST ${TEST} APPEND PROPERTY DEPENDS pretest)
+        if(SDL_INSTALL_TESTS)
+            string(REPLACE "$<TARGET_FILE:" "\${SDL_TEST_DIR}/$<TARGET_FILE_NAME:" install_ctest_command "${command}")
+            string(JOIN "\" \"" install_ctest_command ${install_ctest_command})
+            file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile_install.cmake.in" "add_sdl_test(${TEST} COMMAND \"${install_ctest_command}\" ENVIRONMENT \"${ast_ENVIRONMENT}\" TIMEOUT \"${noninteractive_timeout}\")\n")
         endif()
     endif()
 endfunction()
@@ -641,9 +678,8 @@ foreach(TARGET ${SDL_TEST_EXECUTABLES})
 endforeach()
 
 if(NOT EMSCRIPTEN)
-    add_sdl_test(testautomation-no-simd testautomation)
-    add_sdl_test(testplatform-no-simd testplatform)
-    set_property(TEST testautomation-no-simd testplatform-no-simd APPEND PROPERTY ENVIRONMENT "SDL_CPU_FEATURE_MASK=-all")
+    add_sdl_test(testautomation-no-simd testautomation ENVIRONMENT "SDL_CPU_FEATURE_MASK=-all")
+    add_sdl_test(testplatform-no-simd testplatform ENVIRONMENT "SDL_CPU_FEATURE_MASK=-all")
 
     # testautomation creates temporary files which might conflict
     set_property(TEST testautomation-no-simd testautomation PROPERTY RUN_SERIAL TRUE)
@@ -653,22 +689,28 @@ if(SDL_INSTALL_TESTS)
     if(RISCOS)
         install(
             FILES ${SDL_TEST_EXECUTABLES_AIF}
-            DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL3
+            DESTINATION "${SDL_TEST_INSTALL_DIR}"
         )
     else()
         install(
             TARGETS ${SDL_TEST_EXECUTABLES}
-            DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL3
+            DESTINATION "${SDL_TEST_INSTALL_DIR}"
         )
     endif()
     if(MSVC)
         foreach(test IN LISTS SDL_TEST_EXECUTABLES)
-            SDL_install_pdb(${test} "${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL3")
+            SDL_install_pdb(${test} "${SDL_TEST_INSTALL_DIR}")
         endforeach()
     endif()
     install(
         FILES ${RESOURCE_FILES}
-        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/installed-tests/SDL3
+        DESTINATION "${SDL_TEST_INSTALL_DIR}"
+    )
+    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile_install-$<CONFIG>.cmake"
+        INPUT "${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile_install.cmake.in"
+    )
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile_install-$<CONFIG>.cmake"
+        DESTINATION "${SDL_TEST_INSTALL_DIR}" RENAME "CTestTestfile.cmake"
     )
 endif()
 
