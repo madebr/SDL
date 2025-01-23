@@ -14,8 +14,8 @@ import urllib.request
 import zipfile
 
 # Update both variables when updating the GDK
-GIT_REF = "June_2024_Update_1"
-GDK_EDITION = "240601"  # YYMMUU
+GIT_REF = "October_2024"
+GDK_EDITION = "241000"  # YYMMUU
 
 logger = logging.getLogger(__name__)
 
