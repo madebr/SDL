@@ -1,0 +1,71 @@
+name: 'Setup Nonka N-Gage SDK'
+description: 'Download and setup Nokia N-Gage SDK'
+  path:
+    description: 'Installation path'
+    default: 'default'
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Verify platform'
+      id: calc
+      shell: sh
+      run: |
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          "Windows-X86" | "Windows-X64")
+            echo "ok!"
+            echo "cache-key=ngage-sdk-windows" >> ${GITHUB_OUTPUT}
+            default_install_path="C:/ngagesdk"
+            ;;
+          *)
+            echo "Unsupported ${{ runner.os }}-${{ runner.arch }}"
+            exit 1;
+            ;;
+        esac
+        install_path="${{ inputs.path }}"
+        if [ "x$install_path" = "xdefault" ]; then
+          install_path="$default_install_path"
+        fi
+        echo "install-path=$install_path" >> ${GITHUB_OUTPUT}
+    - name: 'Restore cached ${{ steps.calc.outputs.archive }}'
+      id: cache-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: '${{ runner.temp }}'
+        key: ${{ steps.calc.outputs.cache-key }}
+    - name: 'Download N-Gage SDK'
+      if: ${{ !steps.cache-restore.outputs.cache-hit || steps.cache-restore.outputs.cache-hit == 'false' }}
+      shell: pwsh
+      run: |
+        Invoke-WebRequest "https://raw.githubusercontent.com/ngagesdk/ngage-toolchain/refs/heads/main/cmake/ngage-toolchain.cmake"  -OutFile "${{ runner.temp }}/ngage-toolchain.cmake"
+        Invoke-WebRequest "https://media.githubusercontent.com/media/ngagesdk/ngagesdk.github.io/master/files/apps.zip"  -OutFile "${{ runner.temp }}/apps.zip"
+        Invoke-WebRequest "https://media.githubusercontent.com/media/ngagesdk/ngagesdk.github.io/master/files/sdk.zip"   -OutFile "${{ runner.temp }}/sdk.zip"
+        Invoke-WebRequest "https://media.githubusercontent.com/media/ngagesdk/ngagesdk.github.io/master/files/tools.zip" -OutFile "${{ runner.temp }}/tools.zip"
+    - name: 'Cache ${{ steps.calc.outputs.archive }}'
+      if: ${{ !steps.cache-restore.outputs.cache-hit || steps.cache-restore.outputs.cache-hit == 'false' }}
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ runner.temp }}/apps.zip
+          ${{ runner.temp }}/sdk.zip
+          ${{ runner.temp }}/tools.zip
+        key: ${{ steps.calc.outputs.cache-key }}
+    - name: 'Extract N-Gage SDK'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path "${{ steps.calc.outputs.install-path }}/apps" -Force 
+        New-Item -ItemType Directory -Path "${{ steps.calc.outputs.install-path }}/sdk" -Force 
+        New-Item -ItemType Directory -Path "${{ steps.calc.outputs.install-path }}/tools" -Force 
+        New-Item -ItemType Directory -Path "${{ steps.calc.outputs.install-path }}/cmake" -Force
+
+        7z "-o${{ runner.temp }}/apps.zip"  x "${{ steps.calc.outputs.install-path }}/apps"
+        7z "-o${{ runner.temp }}/sdk.zip"   x "${{ steps.calc.outputs.install-path }}/sdk"
+        7z "-o${{ runner.temp }}/tools.zip" x "${{ steps.calc.outputs.install-path }}/tools"
+        mv "${{ runner.temp }}/ngage-toolchain.cmake" "${{ steps.calc.outputs.install-path }}/cmake"
+    - name: 'Set output variables'
+      id: final
+      shell: pwsh
+      run: |
+        echo "${{ steps.calc.outputs.install-path }}/sdk/sdk/6.1/Shared/EPOC32/gcc/bin" >> $GITHUB_PATH
+        echo "${{ steps.calc.outputs.install-path }}/sdk/sdk/6.1/Shared/EPOC32/ngagesdk/bin" >> $GITHUB_PATH
+        echo "NGAGE_SDK=${{ steps.calc.outputs.install-path }}" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=${{ steps.calc.outputs.install-path }}/cmake/ngage-toolchain.cmake" >> $GITHUB_ENV
