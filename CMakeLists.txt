@@ -4,15 +4,8 @@ if(NOT DEFINED CMAKE_BUILD_TYPE)
   set(cmake_build_type_undefined 1)
 endif()
 
-option(BUILD_FOR_NOKIA_NGAGE "Build for Nokia N-Gage" OFF)
-
 # See docs/release_checklist.md
 project(SDL3 LANGUAGES C VERSION "3.2.5")
-
-if (BUILD_FOR_NOKIA_NGAGE)
-  include(cmake/nokia_ngage.cmake)
-  return()
-endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   set(SDL3_MAINPROJECT ON)
@@ -226,7 +219,7 @@ if(EMSCRIPTEN)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
-if(VITA OR PSP OR PS2 OR N3DS OR RISCOS)
+if(N3DS OR NGAGE OR PSP OR PS2 OR RISCOS OR VITA)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
@@ -2928,6 +2921,81 @@ elseif(N3DS)
   set(HAVE_SDL_LOCALE TRUE)
 
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/io/n3ds/*.c")
+elseif(NGAGE)
+  enable_language(CXX)
+
+  sdl_glob_sources(
+    "${SDL3_SOURCE_DIR}/src/audio/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/audio/ngage/*.cpp"
+#    "${SDL3_SOURCE_DIR}/src/core/*.c"
+    "${SDL3_SOURCE_DIR}/src/core/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/core/ngage/*.cpp"
+#    "${SDL3_SOURCE_DIR}/src/cpuinfo/*.c"
+    "${SDL3_SOURCE_DIR}/src/dynapi/*.c"
+#    "${SDL3_SOURCE_DIR}/src/events/*.c"
+#    "${SDL3_SOURCE_DIR}/src/file/*.c"
+    "${SDL3_SOURCE_DIR}/src/file/generic/*.c"
+#    "${SDL3_SOURCE_DIR}/src/filesystem/*.c"
+    "${SDL3_SOURCE_DIR}/src/filesystem/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/filesystem/ngage/*.cpp"
+    "${SDL3_SOURCE_DIR}/src/filesystem/posix/*.c"
+    "${SDL3_SOURCE_DIR}/src/hidapi/*.c"
+#    "${SDL3_SOURCE_DIR}/src/io/*.c"
+    "${SDL3_SOURCE_DIR}/src/io/generic/*.c"
+    "${SDL3_SOURCE_DIR}/src/libm/s_isinff.c"
+    "${SDL3_SOURCE_DIR}/src/libm/s_isnanf.c"
+#    "${SDL3_SOURCE_DIR}/src/locale/*.c"
+    "${SDL3_SOURCE_DIR}/src/locale/ngage/*.cpp"
+#    "${SDL3_SOURCE_DIR}/src/main/*.c"
+    "${SDL3_SOURCE_DIR}/src/main/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/main/ngage/*.cpp"
+    "${SDL3_SOURCE_DIR}/src/misc/*.c"
+    "${SDL3_SOURCE_DIR}/src/misc/dummy/*.c"
+    "${SDL3_SOURCE_DIR}/src/power/*.c"
+    "${SDL3_SOURCE_DIR}/src/render/*.c"
+    "${SDL3_SOURCE_DIR}/src/render/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/render/ngage/*.cpp"
+#    "${SDL3_SOURCE_DIR}/src/stdlib/*.c"
+#    "${SDL3_SOURCE_DIR}/src/storage/*.c"
+    "${SDL3_SOURCE_DIR}/src/storage/generic/*.c"
+#    "${SDL3_SOURCE_DIR}/src/thread/*.c"
+    "${SDL3_SOURCE_DIR}/src/thread/generic/*.c"
+#    "${SDL3_SOURCE_DIR}/src/time/*.c"
+    "${SDL3_SOURCE_DIR}/src/time/ngage/*.cpp"
+    "${SDL3_SOURCE_DIR}/src/time/unix/*.c"
+#    "${SDL3_SOURCE_DIR}/src/timer/*.c"
+    "${SDL3_SOURCE_DIR}/src/timer/ngage/*.cpp"
+#    "${SDL3_SOURCE_DIR}/src/tray/*.c"
+    "${SDL3_SOURCE_DIR}/src/tray/dummy/*.c"
+#    "${SDL3_SOURCE_DIR}/src/video/*.c"
+    "${SDL3_SOURCE_DIR}/src/video/ngage/*.c"
+    "${SDL3_SOURCE_DIR}/src/video/yuv2rgb/*.c"
+  )
+  set(HAVE_SDL_THREADS TRUE)
+  set(HAVE_SDL_TIMERS TRUE)
+
+  # FIXME: remove absolute paths
+  sdl_link_dependency(ngage
+    LIBS
+      ${EPOC_LIB}/NRenderer.lib
+      ${EPOC_LIB}/3dtypes.a
+      ${EPOC_LIB}/cone.lib
+      ${EPOC_PLATFORM}/gcc/lib/gcc-lib/arm-epoc-pe/2.9-psion-98r2/libgcc.a
+      ${EPOC_PLATFORM}/ngagesdk/lib/gcc/arm-epoc-pe/4.6.4/libgcc_ngage.a
+      ${EPOC_PLATFORM}/ngagesdk/lib/gcc/arm-epoc-pe/4.6.4/libc_ngage.a
+      ${EPOC_LIB}/mediaclientaudiostream.lib
+      ${EPOC_LIB}/charconv.lib
+      ${EPOC_LIB}/bitgdi.lib
+      ${EPOC_LIB}/euser.lib
+      ${EPOC_LIB}/estlib.lib
+      ${EPOC_LIB}/ws32.lib
+      ${EPOC_LIB}/hal.lib
+      ${EPOC_LIB}/fbscli.lib
+      ${EPOC_LIB}/efsrv.lib
+      ${EPOC_LIB}/scdv.lib
+      ${EPOC_LIB}/gdi.lib
+  )
+  # target_compile_definitions(__EXE__)????
 endif()
 
 sdl_sources(${SDL3_SOURCE_DIR}/src/dialog/SDL_dialog.c)
