@@ -2971,7 +2971,6 @@ elseif(NGAGE)
     "${SDL3_SOURCE_DIR}/src/video/ngage/*.c"
     "${SDL3_SOURCE_DIR}/src/video/yuv2rgb/*.c"
   )
-  set(HAVE_SDL_THREADS TRUE)
   set(HAVE_SDL_TIMERS TRUE)
 
   # FIXME: remove absolute paths
@@ -3177,7 +3176,7 @@ endif()
 # We always need to have threads and timers around
 if(NOT HAVE_SDL_THREADS)
   # The emscripten platform has been carefully vetted to work without threads
-  if(EMSCRIPTEN)
+  if(EMSCRIPTEN OR NGAGE)
     set(SDL_THREADS_DISABLED 1)
     sdl_glob_sources("${SDL3_SOURCE_DIR}/src/thread/generic/*.c")
   else()
