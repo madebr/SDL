@@ -780,25 +780,28 @@ def main():
 
     remaining_keys = set(JOB_SPECS.keys())
 
-    all_level_keys = (
-        # Level 1
-        (
-            "haiku",
-        ),
-    )
-
+    canaries = []
     filters = []
     if args.commit_message_file:
         with open(args.commit_message_file, "r") as f:
             commit_message = f.read()
             for m in re.finditer(r"\[sdl-ci-filter (.*)]", commit_message, flags=re.M):
                 filters.append(m.group(1).strip(" \t\n\r\t'\""))
+            for m in re.finditer(r"\[sdl-ci-canary (.*)]", commit_message, flags=re.M):
+                canaries.append(m.group(1).strip(" \t\n\r\t'\""))
 
             if re.search(r"\[sdl-ci-artifacts?]", commit_message, flags=re.M):
                 args.enable_artifacts = True
 
             if re.search(r"\[sdl-ci-(full-)?trackmem(-symbol-names)?]", commit_message, flags=re.M):
                 args.trackmem_symbol_names = True
+
+    if not canaries:
+        canaries.append("haiku")
+    all_level_keys = (
+        # Level 1
+        tuple(canaries),
+    )
 
     if not filters:
         filters.append("*")
