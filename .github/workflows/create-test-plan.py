@@ -723,6 +723,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
             job.cmake_arguments.extend([
                 "-DBUILD_FOR_NOKIA_NGAGE=ON",  # FIXME: remove this
             ])
+            job.artifact = ""  # FIXME: remove this
             job.continue_on_error = True  # FIXME: remove this
             job.setup_ninja = True
             job.static_lib = None  # FIXME: should be StaticLibType.A
