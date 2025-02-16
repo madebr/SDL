@@ -323,6 +323,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
             "pkg-config",
         ])
     pretest_cmd = []
+    precompiled_headers = True
     if trackmem_symbol_names:
         pretest_cmd.append("export SDL_TRACKMEM_SYMBOL_NAMES=1")
     else:
@@ -684,9 +685,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
             job.sudo = ""
             job.cmake_arguments.extend((
                 "-DRISCOS:BOOL=ON",
-                "-DCMAKE_DISABLE_PRECOMPILE_HEADERS:BOOL=ON",
                 "-DSDL_GCC_ATOMICS:BOOL=OFF",
             ))
+            precompiled_headers = False
             job.cmake_toolchain_file = "/home/riscos/env/toolchain-riscos.cmake"
             job.static_lib = StaticLibType.A
         case SdlPlatform.FreeBSD | SdlPlatform.NetBSD:
@@ -716,6 +717,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
         case _:
             raise ValueError(f"Unsupported platform={spec.platform}")
 
+    if job.clang_tidy:
+        precompiled_headers = False
+
     if "ubuntu" in spec.name.lower():
         job.check_sources = True
         job.setup_python = True
@@ -730,6 +734,10 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
         job.cmake_arguments.append(f"-DCMAKE_SHARED_LINKER_FLAGS=\"{my_shlex_join(job.ldflags)}\"")
         job.cmake_arguments.append(f"-DCMAKE_EXE_LINKER_FLAGS=\"{my_shlex_join(job.ldflags)}\"")
     job.pretest_cmd = "\n".join(pretest_cmd)
+
+    if not precompiled_headers:
+        job.cmake_arguments.append("-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON")
+
     def tf(b):
         return "ON" if b else "OFF"
 
