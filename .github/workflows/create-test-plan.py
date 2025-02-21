@@ -133,7 +133,7 @@ JOB_SPECS = {
     "n3ds": JobSpec(name="Nintendo 3DS",                                    os=JobOs.UbuntuLatest,      platform=SdlPlatform.N3ds,        artifact="SDL-n3ds",               container="devkitpro/devkitarm:latest", ),
     "ppc": JobSpec(name="PowerPC",                                          os=JobOs.UbuntuLatest,      platform=SdlPlatform.PowerPC,     artifact="SDL-ppc",                container="dockcross/linux-ppc:latest", ),
     "ppc64": JobSpec(name="PowerPC64",                                      os=JobOs.UbuntuLatest,      platform=SdlPlatform.PowerPC64,   artifact="SDL-ppc64le",            container="dockcross/linux-ppc64le:latest", ),
-    "ps2": JobSpec(name="Sony PlayStation 2",                               os=JobOs.UbuntuLatest,      platform=SdlPlatform.Ps2,         artifact="SDL-ps2",                container="ps2dev/ps2dev:latest", ),
+    "ps2": JobSpec(name="Sony PlayStation 2",                               os=JobOs.UbuntuLatest,      platform=SdlPlatform.Ps2,         artifact="SDL-ps2",                container="ghcr.io/ps2homebrew/ps2homebrew:main", ),
     "psp": JobSpec(name="Sony PlayStation Portable",                        os=JobOs.UbuntuLatest,      platform=SdlPlatform.Psp,         artifact="SDL-psp",                container="pspdev/pspdev:latest", ),
     "vita-pib": JobSpec(name="Sony PlayStation Vita (GLES w/ pib)",         os=JobOs.UbuntuLatest,      platform=SdlPlatform.Vita,        artifact="SDL-vita-pib",           container="vitasdk/vitasdk:latest", vita_gles=VitaGLES.Pib,  ),
     "vita-pvr": JobSpec(name="Sony PlayStation Vita (GLES w/ PVR_PSP2)",    os=JobOs.UbuntuLatest,      platform=SdlPlatform.Vita,        artifact="SDL-vita-pvr",           container="vitasdk/vitasdk:latest", vita_gles=VitaGLES.Pvr, ),
@@ -582,7 +582,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
             job.setup_python = True
             job.pypi_packages.append("selenium")
         case SdlPlatform.Ps2:
-            job.ccache = False  #  actions/ccache does not work in psp container (incompatible tar of busybox)
+            job.ccache = True
             build_parallel = False
             job.shared = False
             job.sudo = ""
