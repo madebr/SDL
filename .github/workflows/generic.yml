@@ -139,6 +139,9 @@ jobs:
         if: ${{ matrix.platform.setup-python }}
         with:
           python-version: '3.x'
+      - name: 'Set up ccache'
+        if: ${{ matrix.platform.ccache && runner.os == 'Windows' }}
+        uses: ./.github/actions/download-ccache
       - name: 'Install PyPI packages'
         if: ${{ matrix.platform.pypi-packages != '' }}
         run: |

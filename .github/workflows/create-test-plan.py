@@ -360,6 +360,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
         ))
     match spec.platform:
         case SdlPlatform.Msvc:
+            job.ccache = not spec.no_cmake
             job.setup_ninja = not spec.gdk
             job.clang_tidy = False  # complains about \threadsafety: "unknown command tag name [clang-diagnostic-documentation-unknown-command]"
             job.msvc_project = spec.msvc_project if spec.msvc_project else ""

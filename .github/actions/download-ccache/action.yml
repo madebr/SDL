@@ -1,0 +1,78 @@
+name: 'Download ccache'
+description: 'Download and cache ccache'
+inputs:
+  version:
+    description: 'ccache version'
+    default: '4.10.2'
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Calculate variables'
+      id: calc
+      shell: sh
+      run: |
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          "Linux-X64")
+            basename="ccache-${{ inputs.version }}-linux-x86_64.tar.xz"
+            extension=".tar.xz"
+            ;;
+          "macOS-X64" | "macOS-ARM64")
+            basename="ccache-${{ inputs.version }}-darwin"
+            extension=".tar.gz"
+            ;;
+          "Windows-X86")
+            basename="ccache-${{ inputs.version }}-windows-i686"
+            extension=".zip"
+            ;;
+          "Windows-X64")
+            basename="ccache-${{ inputs.version }}-windows-x86_64"
+            extension=".zip"
+            ;;
+          *)
+            echo "Unsupported ${{ runner.os }}-${{ runner.arch }}"
+            exit 1;
+            ;;
+        esac
+        archive="${basename}${extension}"
+        echo "extension=${extension}" >> ${GITHUB_OUTPUT}
+        echo "basename=${basename}"   >> ${GITHUB_OUTPUT}
+        echo "archive=${archive}"     >> ${GITHUB_OUTPUT}
+        echo "cache-key=${archive}"   >> ${GITHUB_OUTPUT}
+    - name: 'Restore cached ${{ steps.calc.outputs.archive }}'
+      id: cache-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: '${{ runner.temp }}/${{ steps.calc.outputs.archive }}'
+        key: ${{ steps.calc.outputs.cache-key }}
+    - name: 'Download ccache ${{ inputs.version }} for ${{ runner.os }} (${{ runner.arch }})'
+      if: ${{ !steps.cache-restore.outputs.cache-hit || steps.cache-restore.outputs.cache-hit == 'false' }}
+      shell: pwsh
+      run: |
+        Invoke-WebRequest "https://github.com/ccache/ccache/releases/download/v${{ inputs.version }}/${{ steps.calc.outputs.archive }}" -OutFile "${{ runner.temp }}/${{ steps.calc.outputs.archive }}"
+    - name: 'Cache ${{ steps.calc.outputs.archive }}'
+      if: ${{ !steps.cache-restore.outputs.cache-hit || steps.cache-restore.outputs.cache-hit == 'false' }}
+      uses: actions/cache/save@v4
+      with:
+        path: '${{ runner.temp }}/${{ steps.calc.outputs.archive }}'
+        key: ${{ steps.calc.outputs.cache-key }}
+    - name: 'Extract ccache'
+      shell: sh
+      run: |
+        cd "${{ runner.temp }}"
+        case "${{ steps.calc.outputs.extension }}" in
+          ".tar.gz" | ".tar.xz")
+            tar xf "${{ runner.temp }}/${{ steps.calc.outputs.archive }}"
+            ;;
+          ".zip")
+            7z x "${{ runner.temp }}/${{ steps.calc.outputs.archive }}"
+            ;;
+          *)
+            echo "Unsupported extension ${{ steps.alc.output.extension }}"
+            exit 1;
+            ;;
+        esac
+    - name: 'Set output variables'
+      id: final
+      shell: pwsh
+      run: |
+        echo "${{ runner.temp }}/${{ steps.calc.outputs.basename }}" >> $env:GITHUB_PATH
