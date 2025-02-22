@@ -361,6 +361,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
     match spec.platform:
         case SdlPlatform.Msvc:
             job.ccache = not spec.no_cmake
+            if not spec.clang_cl:
+                # Precompiled headers interfere with ccache
+                job.cmake_arguments.append("-DCMAKE_DISABLE_PRECOMPILE_HEADERS:BOOL=ON")
             job.setup_ninja = not spec.gdk
             job.clang_tidy = False  # complains about \threadsafety: "unknown command tag name [clang-diagnostic-documentation-unknown-command]"
             job.msvc_project = spec.msvc_project if spec.msvc_project else ""
@@ -381,6 +384,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
                     "-DCMAKE_C_COMPILER=clang-cl",
                     "-DCMAKE_CXX_COMPILER=clang-cl",
                 ))
+                # Avoids "error: file 'cmake_pch.c' has been modified since the precompiled header 'cmake_pch.c.pch' was built: mtime changed (was XXXX, now YYYY)"
+                job.cflags.extend(("-Xclang", "-fno-validate-pch"))
+                job.cxxflags.extend(("-Xclang", "-fno-validate-pch"))
                 match spec.msvc_arch:
                     case MsvcArch.X86:
                         job.cflags.append("/clang:-m32")
