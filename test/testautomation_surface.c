@@ -798,6 +798,17 @@ int surface_testOverflow(void *arg)
     return TEST_COMPLETED;
 }
 
+int surface_testInvalidNull(void *arg)
+{
+    SDL_Surface *surface;
+
+    SDLTest_AssertPass("About to call SDL_CreateRGBSurface(0, 10, 10, -1, 0, 0, 0, 0)");
+    surface = SDL_CreateRGBSurface(0, 10, 10, -1, 0, 0, 0, 0);
+    SDLTest_AssertCheck(surface == NULL, "Returned surface should be null, actual surface is %p", surface);
+    SDL_FreeSurface(surface);
+    return TEST_COMPLETED;
+}
+
 /* ================= Test References ================== */
 
 /* Surface test cases */
@@ -856,11 +867,15 @@ static const SDLTest_TestCaseReference surfaceTestOverflow = {
     surface_testOverflow, "surface_testOverflow", "Test overflow detection.", TEST_ENABLED
 };
 
+static const SDLTest_TestCaseReference surfaceInvalidNull = {
+    surface_testInvalidNull, "surface_testInvalidNull", "Test NULL surface on invalid inputs.", TEST_ENABLED
+};
+
 /* Sequence of Surface test cases */
 static const SDLTest_TestCaseReference *surfaceTests[] = {
     &surfaceTest1, &surfaceTest2, &surfaceTest3, &surfaceTest4, &surfaceTest5,
     &surfaceTest6, &surfaceTest7, &surfaceTest8, &surfaceTest9, &surfaceTest10,
-    &surfaceTest11, &surfaceTest12, &surfaceTestOverflow, NULL
+    &surfaceTest11, &surfaceTest12, &surfaceTestOverflow, &surfaceInvalidNull, NULL
 };
 
 /* Surface test suite (global) */
