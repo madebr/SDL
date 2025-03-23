@@ -130,6 +130,38 @@ endmacro()
 # Requires:
 # - PkgCheckModules
 # Optional:
+# - SDL_NOTCURSES_SHARED opt
+# - HAVE_SDL_LOADSO opt
+macro(CheckNotcurses)
+  if(SDL_NOTCURSES)
+    set(Notcurses_PKG_CONFIG_SPEC "notcurses-core >= 3")
+    set(PC_NOTCURSES_FOUND FALSE)
+    if(PKG_CONFIG_FOUND)
+      pkg_check_modules(PC_NOTCURSES IMPORTED_TARGET ${Notcurses_PKG_CONFIG_SPEC})
+    endif()
+    if(PC_NOTCURSES_FOUND)
+      set(HAVE_NOTCURSES TRUE)
+      sdl_glob_sources("${SDL3_SOURCE_DIR}/src/video/notcurses/*.c")
+      set(SDL_VIDEO_DRIVER_NOTCURSES 1)
+      if(SDL_NOTCURSES_SHARED AND NOT HAVE_SDL_LOADSO)
+        message(WARNING "You must have SDL_LoadObject() support for dynamic NOTCURSES video loading")
+      endif()
+      FindLibraryAndSONAME("notcurses-core" LIBDIRS ${PC_NOTCURSES_LIBRARY_DIRS})
+      if(SDL_NOTCURSES_SHARED AND NOTCURSES_CORE_LIB AND HAVE_SDL_LOADSO)
+        set(SDL_VIDEO_DRIVER_NOTCURSES_CORE_DYNAMIC "\"${NOTCURSES_CORE_LIB_SONAME}\"")
+        set(HAVE_NOTCURSES_SHARED TRUE)
+        sdl_link_dependency(notcurses INCLUDES $<TARGET_PROPERTY:PkgConfig::PC_NOTCURSES,INTERFACE_INCLUDE_DIRECTORIES>)
+      else()
+        sdl_link_dependency(notcurses LIBS PkgConfig::PC_NOTCURSES PKG_CONFIG_PREFIX PC_NOTCURSES PKG_CONFIG_SPECS ${Notcurses_PKG_CONFIG_SPEC})
+      endif()
+      set(HAVE_SDL_VIDEO TRUE)
+    endif()
+  endif()
+endmacro()
+
+# Requires:
+# - PkgCheckModules
+# Optional:
 # - SDL_PIPEWIRE_SHARED opt
 # - HAVE_SDL_LOADSO opt
 macro(CheckPipewire)

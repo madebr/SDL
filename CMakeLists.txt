@@ -330,6 +330,8 @@ dep_option(SDL_DISKAUDIO           "Support the disk writer audio driver" ON "SD
 dep_option(SDL_DUMMYAUDIO          "Support the dummy audio driver" ON "SDL_AUDIO" OFF)
 dep_option(SDL_DUMMYVIDEO          "Use dummy video driver" ON "SDL_VIDEO" OFF)
 dep_option(SDL_IBUS                "Enable IBus support" ON "${UNIX_SYS}" OFF)
+dep_option(SDL_NOTCURSES           "Use notcurses video driver" ${UNIX_SYS} "SDL_VIDEO" OFF)
+dep_option(SDL_NOTCURSES_SHARED    "Dynamically load notcurses support" ON "SDL_NOTCURSES;SDL_DEPS_SHARED" OFF)
 dep_option(SDL_OPENGL              "Include OpenGL support" ON "SDL_VIDEO;NOT IOS;NOT VISIONOS;NOT TVOS;NOT WATCHOS" OFF)
 dep_option(SDL_OPENGLES            "Include OpenGL ES support" ON "SDL_VIDEO;NOT VISIONOS;NOT TVOS;NOT WATCHOS" OFF)
 set_option(SDL_PTHREADS            "Use POSIX threads for multi-threading" ${SDL_PTHREADS_DEFAULT})
@@ -1583,6 +1585,7 @@ elseif(UNIX AND NOT APPLE AND NOT RISCOS AND NOT HAIKU)
     # Need to check for ROCKCHIP platform and get rid of "Can't window GBM/EGL surfaces on window creation."
     CheckROCKCHIP()
     CheckX11()
+    CheckNotcurses()
     # Need to check for EGL first because KMSDRM and Wayland depend on it.
     CheckEGL()
     CheckKMSDRM()
