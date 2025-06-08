@@ -19,6 +19,7 @@ jobs:
           python-version: 3.x
       - uses: actions/checkout@main
         with:
+          fetch-depth: 2
           sparse-checkout: '.github/workflows/create-test-plan.py'
       - name: 'Create plan'
         id: plan
@@ -26,9 +27,18 @@ jobs:
           # Adding [sdl-ci-filter GLOB] to the commit message will limit the jobs
           # e.g. [sdl-ci-filter msvc-*]
           EOF=$(openssl rand -hex 32)
+          if ${{ github.event_name == 'push' }}; then
           cat >/tmp/commit_message.txt <<$EOF
           ${{ github.event.head_commit.message }}
           $EOF
+          else
+          echo "github.event.commits_url=${{ github.event.commits_url }}"
+          curl "${{ github.event.commits_url }}">commits.txt
+          cat commits.txt
+          cat >/tmp/commit_message.txt <<$EOF
+          TODO
+          $EOF
+          end
 
           python .github/workflows/create-test-plan.py \
             --github-variable-prefix platforms \
