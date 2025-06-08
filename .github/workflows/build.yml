@@ -38,7 +38,7 @@ jobs:
           cat >/tmp/commit_message.txt <<$EOF
           TODO
           $EOF
-          end
+          fi
 
           python .github/workflows/create-test-plan.py \
             --github-variable-prefix platforms \
