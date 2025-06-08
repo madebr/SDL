@@ -32,8 +32,8 @@ jobs:
           ${{ github.event.head_commit.message }}
           $EOF
           else
-          echo "github.event.commits_url=${{ github.event.commits_url }}"
-          curl "${{ github.event.commits_url }}">commits.txt
+          echo "github.event.pull_request.commits_url=${{ github.event.pull_request.commits_url }}"
+          curl "${{ github.event.pull_request.commits_url }}">commits.txt
           cat commits.txt
           cat >/tmp/commit_message.txt <<$EOF
           TODO
