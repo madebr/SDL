@@ -906,6 +906,9 @@ SDL_IOStream *SDL_IOFromFile(const char *file, const char *mode)
             fp = NULL;
             SDL_SetError("%s is not a regular file or pipe", file);
         } else {
+            #ifdef SDL_PLATFORM_DOS  // !!! FIXME: I don't know know why, but seeking seems to be broken in djgpp if buffering is enabled.
+            setvbuf(fp, NULL, _IONBF, 0);
+            #endif
             iostr = SDL_IOFromFP(fp, true);
         }
     }
