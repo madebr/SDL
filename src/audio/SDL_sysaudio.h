@@ -160,6 +160,7 @@ typedef struct SDL_AudioDriverImpl
     void (*FlushRecording)(SDL_AudioDevice *device);
     void (*CloseDevice)(SDL_AudioDevice *device);
     void (*FreeDeviceHandle)(SDL_AudioDevice *device); // SDL is done with this device; free the handle from SDL_AddAudioDevice()
+    void (*Pump)(void);  // for single-threaded systems with no better options. Most things should not implement this!
     void (*DeinitializeStart)(void); // SDL calls this, then starts destroying objects, then calls Deinitialize. This is a good place to stop hotplug detection.
     void (*Deinitialize)(void);
 
@@ -396,5 +397,6 @@ extern AudioBootStrap N3DSAUDIO_bootstrap;
 extern AudioBootStrap NGAGEAUDIO_bootstrap;
 extern AudioBootStrap EMSCRIPTENAUDIO_bootstrap;
 extern AudioBootStrap QSAAUDIO_bootstrap;
+extern AudioBootStrap DOSSOUNDBLASTER_bootstrap;
 
 #endif // SDL_sysaudio_h_

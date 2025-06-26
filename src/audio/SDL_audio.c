@@ -92,6 +92,9 @@ static const AudioBootStrap *const bootstrap[] = {
 #ifdef SDL_AUDIO_DRIVER_QNX
     &QSAAUDIO_bootstrap,
 #endif
+#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
+    &DOSSOUNDBLASTER_bootstrap,
+#endif
 #ifdef SDL_AUDIO_DRIVER_DISK
     &DISKAUDIO_bootstrap,
 #endif
@@ -811,9 +814,10 @@ static bool SDL_AudioPlayDevice_Default(SDL_AudioDevice *device, const Uint8 *bu
 static bool SDL_AudioWaitRecordingDevice_Default(SDL_AudioDevice *device) { return true; /* no-op. */ }
 static void SDL_AudioFlushRecording_Default(SDL_AudioDevice *device) { /* no-op. */ }
 static void SDL_AudioCloseDevice_Default(SDL_AudioDevice *device) { /* no-op. */ }
+static void SDL_AudioFreeDeviceHandle_Default(SDL_AudioDevice *device) { /* no-op. */ }
+static void SDL_AudioPump_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitializeStart_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitialize_Default(void) { /* no-op. */ }
-static void SDL_AudioFreeDeviceHandle_Default(SDL_AudioDevice *device) { /* no-op. */ }
 
 static void SDL_AudioThreadInit_Default(SDL_AudioDevice *device)
 {
@@ -865,6 +869,7 @@ static void CompleteAudioEntryPoints(void)
     FILL_STUB(FlushRecording);
     FILL_STUB(CloseDevice);
     FILL_STUB(FreeDeviceHandle);
+    FILL_STUB(Pump);
     FILL_STUB(DeinitializeStart);
     FILL_STUB(Deinitialize);
     #undef FILL_STUB
@@ -2590,6 +2595,10 @@ bool SDL_AudioDeviceFormatChanged(SDL_AudioDevice *device, const SDL_AudioSpec *
 // ("UpdateSubsystem" is the same naming that the other things that hook into PumpEvents use.)
 void SDL_UpdateAudio(void)
 {
+    if (current_audio.impl.Pump) {
+        current_audio.impl.Pump();
+    }
+
     SDL_LockRWLockForReading(current_audio.device_hash_lock);
     SDL_PendingAudioDeviceEvent *pending_events = current_audio.pending_events.next;
     SDL_UnlockRWLock(current_audio.device_hash_lock);

@@ -283,7 +283,7 @@
 #cmakedefine SDL_AUDIO_DRIVER_N3DS 1
 #cmakedefine SDL_AUDIO_DRIVER_NGAGE 1
 #cmakedefine SDL_AUDIO_DRIVER_QNX 1
-
+#cmakedefine SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER 1
 #cmakedefine SDL_AUDIO_DRIVER_PRIVATE 1
 
 /* Enable various input drivers */

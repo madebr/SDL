@@ -2951,6 +2951,26 @@ elseif(N3DS)
 
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/io/n3ds/*.c")
 
+elseif(DOS)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/main/dos/*.c")
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/core/dos/*.c")
+
+  set(SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/audio/dos/*.c")
+  set(HAVE_SDL_AUDIO TRUE)
+
+  set(SDL_FSOPS_POSIX 1)
+
+  # !!! FIXME
+  set(SDL_TIME_UNIX 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/unix/*.c")
+  set(HAVE_SDL_TIME TRUE)
+
+  # !!! FIXME
+  set(SDL_TIMER_UNIX 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/unix/*.c")
+  set(HAVE_SDL_TIMERS TRUE)
+
 elseif(NGAGE)
 
   enable_language(CXX)
