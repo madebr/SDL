@@ -591,6 +591,10 @@ static Sint64 SDLCALL stdio_seek(void *userdata, Sint64 offset, SDL_IOWhence whe
     const bool is_noop = (whence == SDL_IO_SEEK_CUR) && (offset == 0);
 
     if (is_noop || fseek(iodata->fp, (fseek_off_t)offset, stdiowhence) == 0) {
+        #ifdef SDL_PLATFORM_DOS  // !!! FIXME: I don't know know why, but seeking seems to be broken in djgpp if buffering is enabled. Dump the buffer and recreate it for now.
+        setvbuf(iodata->fp, NULL, _IONBF, 0);
+        setvbuf(iodata->fp, NULL, _IOFBF, 16 * 1024);
+        #endif
         const Sint64 pos = ftell(iodata->fp);
         if (pos < 0) {
             SDL_SetError("Couldn't get stream offset: %s", strerror(errno));
@@ -906,9 +910,6 @@ SDL_IOStream *SDL_IOFromFile(const char *file, const char *mode)
             fp = NULL;
             SDL_SetError("%s is not a regular file or pipe", file);
         } else {
-            #ifdef SDL_PLATFORM_DOS  // !!! FIXME: I don't know know why, but seeking seems to be broken in djgpp if buffering is enabled.
-            setvbuf(fp, NULL, _IONBF, 0);
-            #endif
             iostr = SDL_IOFromFP(fp, true);
         }
     }
