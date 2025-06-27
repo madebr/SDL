@@ -65,16 +65,12 @@ static volatile bool soundblaster_irq_fired = false;
 static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
     soundblaster_irq_fired = true;
-    inportb(soundblaster_base_port + 0xF);  // acknowledge the interrupt by reading this port. Makes the SB stop pulling the line.  This is a different port (+ 0xE) when not using DSP 4.xx features!
-    outportb(0x20, 0x20);  // Send EOI to Programmable Interrupt Controller.
-}
-
-static void DOSSOUNDBLASTER_Pump(void)
-{
-    if (soundblaster_irq_fired) {
-        soundblaster_irq_fired = false;
+    if (opened_soundblaster_device) {
         SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
     }
+
+    inportb(soundblaster_base_port + 0xF);  // acknowledge the interrupt by reading this port. Makes the SB stop pulling the line.  This is a different port (+ 0xE) when not using DSP 4.xx features!
+    outportb(0x20, 0x20);  // Send EOI to Programmable Interrupt Controller.
 }
 
 static void HookSoundBlasterIRQ(SDL_AudioDevice *device)
@@ -97,14 +93,14 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     device->spec.format = SDL_AUDIO_S16LE;
     device->spec.channels = 2;
     device->spec.freq = 44100;
-    device->sample_frames = SDL_GetDefaultSampleFramesFromFreq(device->spec.freq) * 2;
+    device->sample_frames = SDL_GetDefaultSampleFramesFromFreq(device->spec.freq);
+
+    // Calculate the final parameters for this audio specification
+    SDL_UpdatedAudioDeviceFormat(device);
 
     if (device->buffer_size > (32 * 1024)) {
         return SDL_SetError("Buffer size is too large (choose smaller audio format and/or less sample frames");  // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
     }
-
-    // Calculate the final parameters for this audio specification
-    SDL_UpdatedAudioDeviceFormat(device);
 
     // Initialize all variables that we clean on shutdown
     struct SDL_PrivateAudioData *hidden = (struct SDL_PrivateAudioData *) SDL_calloc(1, sizeof(*device->hidden));
@@ -176,12 +172,14 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 static Uint8 *DOSSOUNDBLASTER_GetDeviceBuf(SDL_AudioDevice *device, int *buffer_size)
 {
     struct SDL_PrivateAudioData *hidden = device->hidden;
-    const int halfdma = (hidden->dma_buflen / 2);
+    SDL_assert(*buffer_size == (hidden->dma_buflen / 2));
+    const int halfdma = *buffer_size;
 
     // !!! FIXME: this count is 16-bit samples, need to adjust for 8-bit.
     int count = (int) inportb(0xc0+(hidden->dma_channel-4)*4+2);    // !!! FIXME: is this different for low DMA?
     count += (int) inportb(0xc0+(hidden->dma_channel-4)*4+2) << 8;
     return hidden->dma_buffer + (count < (halfdma/2) ? 0 : halfdma);  // !!! FIXME: dealing in 16-bit samples (the `/ 2`)
+
 }
 
 static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
@@ -322,7 +320,6 @@ static bool DOSSOUNDBLASTER_Init(SDL_AudioDriverImpl *impl)
     impl->OpenDevice = DOSSOUNDBLASTER_OpenDevice;
     impl->GetDeviceBuf = DOSSOUNDBLASTER_GetDeviceBuf;
     impl->CloseDevice = DOSSOUNDBLASTER_CloseDevice;
-    impl->Pump = DOSSOUNDBLASTER_Pump;
 
     // !!! FIXME: maybe later
     //impl->WaitRecordingDevice = DOSSOUNDBLASTER_WaitDevice;
