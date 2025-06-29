@@ -2964,6 +2964,12 @@ elseif(DOS)
   set(HAVE_SDL_VIDEO TRUE)
 
   set(SDL_FSOPS_POSIX 1)
+  sdl_sources("${SDL3_SOURCE_DIR}/src/filesystem/posix/SDL_sysfsops.c")
+  set(HAVE_SDL_FSOPS TRUE)
+
+  set(SDL_FILESYSTEM_DOS 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/filesystem/dos/*.c")
+  set(HAVE_SDL_FILESYSTEM TRUE)
 
   # !!! FIXME
   set(SDL_TIME_UNIX 1)
