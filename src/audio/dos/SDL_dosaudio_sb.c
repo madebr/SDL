@@ -60,13 +60,17 @@ static Uint8 ReadSoundBlasterDSP(void)
     return (Uint8) inportb(query_port);
 }
 
+volatile int audio_streams_locked = 0;
 static SDL_AudioDevice *opened_soundblaster_device = NULL;
 static volatile bool soundblaster_irq_fired = false;
 static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
-    soundblaster_irq_fired = true;
     if (opened_soundblaster_device) {
-        SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
+        if (audio_streams_locked) {
+            soundblaster_irq_fired = true;  // will need to handle this during unlock.
+        } else {
+            SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
+        }
     }
 
     inportb(soundblaster_base_port + 0xF);  // acknowledge the interrupt by reading this port. Makes the SB stop pulling the line.  This is a different port (+ 0xE) when not using DSP 4.xx features!
@@ -83,6 +87,37 @@ static void HookSoundBlasterIRQ(SDL_AudioDevice *device)
     _go32_dpmi_chain_protected_mode_interrupt_vector(hidden->interrupt_vector, &hidden->irq_handler_seginfo);
     outportb(0x21, inportb(0x21) & (~(1<<soundblaster_irq)));  // enable interrupt
 }
+
+// this is sort of hacky, but we need to make sure the audio interrupt doesn't
+//  run while an audio stream is locked, since we don't have real mutexes, and
+//  this is as close to multithreaded as we'll be getting for now.
+// !!! FIXME: we should probably do this only for streams bound to an audio
+// !!! FIXME: device, but good enough for now.
+void SDL_DOS_LockAudioStream(SDL_AudioStream *stream)
+{
+    DOS_DisableInterrupts();
+    audio_streams_locked++;
+    DOS_EnableInterrupts();
+}
+
+void SDL_DOS_UnlockAudioStream(SDL_AudioStream *stream)
+{
+    DOS_DisableInterrupts();
+
+    if (audio_streams_locked > 0) {
+        if (--audio_streams_locked == 0) {
+            if (opened_soundblaster_device && soundblaster_irq_fired) {
+                // uhoh, IRQ fired while we were locked, run an iteration right now to catch up!
+                // if you locked for a _really_ long time, you're going to get skips, but we can't help you there.
+                soundblaster_irq_fired = false;
+                SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
+            }
+        }
+    }
+
+    DOS_EnableInterrupts();
+}
+
 
 static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 {

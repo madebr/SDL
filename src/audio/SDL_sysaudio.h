@@ -145,6 +145,9 @@ extern int SDL_GetAudioStreamDataAdjustGain(SDL_AudioStream *stream, void *voidb
 // This is the bulk of `SDL_SetAudioStream*putChannelMap`'s work, but it lets you skip the check about changing the device end of a stream if isinput==-1.
 extern bool SetAudioStreamChannelMap(SDL_AudioStream *stream, const SDL_AudioSpec *spec, int **stream_chmap, const int *chmap, int channels, int isinput);
 
+// use these instead of using stream->lock directly.
+extern void LockAudioStream(SDL_AudioStream *stream);
+extern void UnlockAudioStream(SDL_AudioStream *stream);
 
 typedef struct SDL_AudioDriverImpl
 {
