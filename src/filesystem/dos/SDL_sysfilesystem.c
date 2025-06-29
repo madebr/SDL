@@ -22,6 +22,7 @@
 
 #ifdef SDL_FILESYSTEM_DOS
 
+#include <sys/stat.h>
 #include <dir.h>
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
