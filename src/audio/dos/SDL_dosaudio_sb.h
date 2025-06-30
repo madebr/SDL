@@ -32,9 +32,7 @@ struct SDL_PrivateAudioData
     size_t dma_buflen;
     int dma_channel;
     _go32_dpmi_seginfo dma_seginfo;
-    int interrupt_vector;
-    _go32_dpmi_seginfo irq_handler_seginfo;
-    _go32_dpmi_seginfo original_irq_handler_seginfo;
+    DOS_InterruptHook interrupt_hook;
 };
 
 #endif // SDL_ALSA_audio_h_

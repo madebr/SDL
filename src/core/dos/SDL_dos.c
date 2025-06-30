@@ -83,5 +83,40 @@ char *DOS_GetFarPtrCString(const Uint32 segoffset)
     return retval;
 }
 
+void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook)
+{
+    SDL_assert(irq > 0);
+    SDL_assert(fn != NULL);
+    SDL_assert(hook != NULL);
+    hook->fn = fn;
+    hook->irq = irq;
+    hook->interrupt_vector = DOS_IRQToVector(irq);
+    hook->irq_handler_seginfo.pm_selector = _go32_my_cs();
+    hook->irq_handler_seginfo.pm_offset = (uint32_t) fn;
+    _go32_dpmi_get_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
+    _go32_dpmi_chain_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->irq_handler_seginfo);
+    outportb(0x21, inportb(0x21) & (~(1<<irq)));  // enable interrupt
+}
+
+void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
+{
+    if (!hook || !hook->fn) {
+        return;
+    }
+
+    SDL_assert(hook->interrupt_vector > 0);
+    SDL_assert(hook->irq > 0);
+
+    if (disable_interrupt) {
+        outportb( 0x21, inportb(0x21) | (1 << hook->irq) );
+    }
+
+    // !!! FIXME: do we not have to free something from _go32_dpmi_chain_protected_mode_interrupt_vector?
+    _go32_dpmi_set_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
+
+    SDL_zerop(hook);
+}
+
+
 #endif // defined(SDL_PLATFORM_DOS)
 

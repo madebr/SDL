@@ -74,18 +74,7 @@ static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that han
     }
 
     inportb(soundblaster_base_port + 0xF);  // acknowledge the interrupt by reading this port. Makes the SB stop pulling the line.  This is a different port (+ 0xE) when not using DSP 4.xx features!
-    outportb(0x20, 0x20);  // Send EOI to Programmable Interrupt Controller.
-}
-
-static void HookSoundBlasterIRQ(SDL_AudioDevice *device)
-{
-    struct SDL_PrivateAudioData *hidden = device->hidden;
-    hidden->interrupt_vector = DOS_IRQToVector(soundblaster_irq);
-    hidden->irq_handler_seginfo.pm_selector = _go32_my_cs();
-    hidden->irq_handler_seginfo.pm_offset = (uint32_t) SoundBlasterIRQHandler;
-    soundblaster_irq_fired = false;
-    _go32_dpmi_chain_protected_mode_interrupt_vector(hidden->interrupt_vector, &hidden->irq_handler_seginfo);
-    outportb(0x21, inportb(0x21) & (~(1<<soundblaster_irq)));  // enable interrupt
+    DOS_EndOfInterrupt();
 }
 
 // this is sort of hacky, but we need to make sure the audio interrupt doesn't
@@ -118,7 +107,6 @@ void SDL_DOS_UnlockAudioStream(SDL_AudioStream *stream)
     DOS_EnableInterrupts();
 }
 
-
 static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 {
     // !!! FIXME: some things are hardcoded for this below, but we can use different formats in reality.
@@ -144,7 +132,6 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     }
 
     device->hidden = hidden;
-    device->hidden->interrupt_vector = -1;
 
     ResetSoundBlasterDSP();
 
@@ -178,7 +165,8 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     outportb(0xDC, 0);  // clear the write mask.
     outportb(0xD4, ~4 & hidden->dma_channel);  // unmask the DMA channel FIXME: is this different for low DMA?
 
-    HookSoundBlasterIRQ(device);
+    soundblaster_irq_fired = false;
+    DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
     WriteSoundBlasterDSP(0xD1);  // turn on the speaker
     // !!! FIXME: can we query (soundblaster_base_port + 0xC) to see if this is done faster?
@@ -225,11 +213,7 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
         WriteSoundBlasterDSP(0xDA);  // exit auto-init
         WriteSoundBlasterDSP(0xD3);  // turn off the speaker
 
-        // disable our interrupt handler.
-        outportb(0x21, inportb(0x21) | (1<<soundblaster_irq));  // disable interrupt
-        if (hidden->interrupt_vector >= 0) {
-            _go32_dpmi_set_protected_mode_interrupt_vector(hidden->interrupt_vector, &hidden->original_irq_handler_seginfo);
-        }
+        DOS_UnhookInterrupt(&hidden->interrupt_hook, true);
 
         // disable DMA.
         if (hidden->dma_buffer) {

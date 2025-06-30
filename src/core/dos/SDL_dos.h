@@ -90,6 +90,10 @@ SDL_FORCE_INLINE Uint32 DOS_PeekUint32(const Uint32 segoffset)
     return (Uint32) _farpeekl(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
 }
 
+SDL_FORCE_INLINE void DOS_EndOfInterrupt(void)
+{
+    outportb(0x20, 0x20);  // Send EOI to Programmable Interrupt Controller.
+}
 
 // Allocate memory under the 640k line; various real mode services and DMA transfers need this.
 //  malloc() returns data above 640k because we're a protected mode, 32-bit process, so this is
@@ -104,6 +108,20 @@ extern void DOS_FreeConventionalMemory(_go32_dpmi_seginfo *seginfo);
 
 // Get a SDL_malloc'd copy of a null-terminated string located at a real-mode segment:offset. This makes no promises about character encoding.
 char *DOS_GetFarPtrCString(const Uint32 segoffset);
+
+typedef void (*DOS_InterruptHookFn)(void);
+typedef struct DOS_InterruptHook
+{
+    DOS_InterruptHookFn fn;
+    int irq;
+    int interrupt_vector;  // this is the _vector_ number, not the IRQ number!
+    _go32_dpmi_seginfo irq_handler_seginfo;
+    _go32_dpmi_seginfo original_irq_handler_seginfo;
+    bool installed;
+} DOS_InterruptHook;
+
+void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook);  // `irq` is the IRQ number, not the interrupt vector number!
+void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt);
 
 // Ends C function definitions when using C++
 #ifdef __cplusplus
