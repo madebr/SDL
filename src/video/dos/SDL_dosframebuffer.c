@@ -25,6 +25,8 @@
 #include "../SDL_sysvideo.h"
 #include "SDL_dosvideo.h"
 #include "SDL_dosframebuffer_c.h"
+#include "SDL_dosmouse.h"
+#include "../../events/SDL_mouse_c.h"
 #include "../../SDL_properties_c.h"
 
 // note that DOS_SURFACE's value is the same string that the dummy driver uses.
@@ -99,6 +101,17 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
     }
 
     const SDL_Rect dstrect = { (dst->w - src->w) / 2, (dst->h - src->h) / 2, src->w, src->h };
+    SDL_Mouse *mouse = SDL_GetMouse();
+    SDL_Surface *cursor = NULL;
+    SDL_Rect cursorrect;
+
+    if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
+        cursor = mouse->cur_cursor->internal->surface;
+        if (cursor) {
+            cursorrect.x = dstrect.x + SDL_clamp((int) mouse->x, 0, window->w);
+            cursorrect.y = dstrect.y + SDL_clamp((int) mouse->y, 0, window->h);
+        }
+    }
 
     // wait for vsync if necessary...
     const int vsync_interval = windata->framebuffer_vsync;
@@ -108,7 +121,17 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         }
     }
 
-    return SDL_BlitSurface(src, NULL, dst, &dstrect);
+    if (!SDL_BlitSurface(src, NULL, dst, &dstrect)) {
+        return false;
+    }
+
+    if (cursor) {
+        if (!SDL_BlitSurface(cursor, NULL, dst, &cursorrect)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void DOSVESA_DestroyWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window)

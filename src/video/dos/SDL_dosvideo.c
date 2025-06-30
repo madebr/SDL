@@ -30,9 +30,9 @@
 
 // DOS declarations
 #include "SDL_dosvideo.h"
-//#include "SDL_dosevents_c.h"
+#include "SDL_dosevents_c.h"
 #include "SDL_dosframebuffer_c.h"
-//#include "SDL_dosmouse.h"
+#include "SDL_dosmouse.h"
 
 // Some VESA usage information:
 //   https://delorie.com/djgpp/doc/ug/graphics/vesa.html.en
@@ -363,6 +363,19 @@ static bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sd
     SDL_memset(DOS_PhysicalToLinear(data->mapping.address), '\0', modedata->h * modedata->pitch);
 
     SDL_copyp(&data->current_mode, mode);
+
+    if (SDL_GetMouse()->internal != NULL) {  // internal != NULL) == int 33h services available.
+        regs.x.ax = 0x7;  // set mouse min/max horizontal position.
+        regs.x.cx = 0;
+        regs.x.dx = (Uint16) mode->w;
+        __dpmi_int(0x33, &regs);
+
+        regs.x.ax = 0x8;  // set mouse min/max vertical position.
+        regs.x.cx = 0;
+        regs.x.dx = (Uint16) mode->h;
+        __dpmi_int(0x33, &regs);
+    }
+
     return true;
 }
 
@@ -432,7 +445,7 @@ static bool DOSVESA_VideoInit(SDL_VideoDevice *device)
         return false;
     }
 
-//    DOSVESA_InitMouse(device);
+    DOSVESA_InitMouse(device);
 
     return true;
 }
@@ -459,10 +472,6 @@ static void DOSVESA_Destroy(SDL_VideoDevice *device)
     SDL_free(device->internal);
     SDL_free(device);
     FreeVESAInfo();
-}
-
-void DOSVESA_PumpEvents(SDL_VideoDevice *_this)
-{
 }
 
 static SDL_VideoDevice *DOSVESA_CreateDevice(void)
