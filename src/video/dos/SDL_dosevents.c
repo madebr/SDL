@@ -128,30 +128,16 @@ static const SDL_Scancode DOSVESA_ScancodeMapping[] = {  // index is the scancod
     /* 0x058 */ SDL_SCANCODE_F12
 };
 
-
-typedef struct DOSVESA_KeyEventBuffer
-{
-    Uint8 keyevents[256];
-    int num_keyevents;
-} DOSVESA_KeyEventBuffer;
-
-static DOSVESA_KeyEventBuffer keyevent_buffers[2];
-static volatile int current_keyevent_buffer = 0;  // interrupt handler writes to this buffer.
+static Uint8 keyevents_ringbuffer[256];
+static int keyevents_head = 0;
+static int keyevents_tail = 0;
 
 void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 {
-    DOS_DisableInterrupts();
-    const int keyevent_buffer_to_process = current_keyevent_buffer;
-    current_keyevent_buffer = (current_keyevent_buffer + 1) & 1;
-    DOS_EnableInterrupts();
+    while (keyevents_head != keyevents_tail) {
+        const Uint8 event = keyevents_ringbuffer[keyevents_tail];
+        keyevents_tail = (keyevents_tail + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
 
-    DOSVESA_KeyEventBuffer *evbuf = &keyevent_buffers[keyevent_buffer_to_process];
-    const Uint8 *events = evbuf->keyevents;
-    const int total = SDL_min(evbuf->num_keyevents, SDL_arraysize(evbuf->keyevents));
-    evbuf->num_keyevents = 0;
-
-    for (int i = 0; i < total; i++) {
-        const Uint8 event = events[i];
         const int scancode = (int) (event & 0x7F);
         const bool pressed = ((event & 0x80) == 0);
 
@@ -194,11 +180,8 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 
 static void KeyboardIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
-    const Uint8 key = inportb(0x60);
-    DOSVESA_KeyEventBuffer *evbuf = &keyevent_buffers[current_keyevent_buffer];
-    if (evbuf->num_keyevents < SDL_arraysize(evbuf->keyevents)) {
-	    evbuf->keyevents[evbuf->num_keyevents++] = key;
-    }
+    keyevents_ringbuffer[keyevents_head] = inportb(0x60);
+    keyevents_head = (keyevents_head + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
     DOS_EndOfInterrupt();
 }
 
