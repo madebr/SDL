@@ -446,6 +446,7 @@ static bool DOSVESA_VideoInit(SDL_VideoDevice *device)
     }
 
     DOSVESA_InitMouse(device);
+    DOSVESA_InitKeyboard(device);
 
     return true;
 }
@@ -465,6 +466,9 @@ static void DOSVESA_VideoQuit(SDL_VideoDevice *device)
     __dpmi_int(0x10, &regs);
 
     SDL_zero(data->current_mode);
+
+    DOSVESA_QuitMouse(device);
+    DOSVESA_QuitKeyboard(device);
 }
 
 static void DOSVESA_Destroy(SDL_VideoDevice *device)
