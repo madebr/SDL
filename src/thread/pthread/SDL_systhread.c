@@ -60,8 +60,23 @@
 #ifdef HAVE_SIGNAL_H
 // List of signals to mask in the subthreads
 static const int sig_list[] = {
-    SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGWINCH,
-    SIGVTALRM, SIGPROF, 0
+    SIGHUP,
+    SIGINT,
+    SIGQUIT,
+    SIGPIPE,
+    SIGALRM,
+    SIGTERM,
+#ifdef SIGCHLD
+    SIGCHLD,
+#endif
+#ifdef SIGWINCH
+    SIGWINCH,
+#endif
+#ifdef SIGVTALRM
+    SIGVTALRM,
+#endif
+    SIGPROF,
+    0
 };
 #endif
 
@@ -180,7 +195,7 @@ void SDL_SYS_SetupThread(const char *name)
 
 SDL_ThreadID SDL_GetCurrentThreadID(void)
 {
-    return (SDL_ThreadID)pthread_self();
+    return (SDL_ThreadID)(uintptr_t)pthread_self();
 }
 
 bool SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)

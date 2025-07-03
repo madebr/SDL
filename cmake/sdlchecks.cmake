@@ -826,6 +826,7 @@ endmacro()
 macro(CheckPTHREAD)
   cmake_push_check_state()
   if(SDL_PTHREADS)
+    set(PTHREAD_LIBS)
     if(ANDROID OR SDL_PTHREADS_PRIVATE)
       # the android libc provides built-in support for pthreads, so no
       # additional linking or compile flags are necessary
@@ -835,6 +836,8 @@ macro(CheckPTHREAD)
     elseif(BSDI)
       set(PTHREAD_CFLAGS "-D_REENTRANT -D_THREAD_SAFE")
       set(PTHREAD_LDFLAGS "")
+    elseif(DJGPP)
+      set(PTHREAD_LIBS "gthreads")
     elseif(DARWIN)
       set(PTHREAD_CFLAGS "-D_THREAD_SAFE")
       # causes Carbon.p complaints?
@@ -880,6 +883,7 @@ macro(CheckPTHREAD)
 
     # Run some tests
     string(APPEND CMAKE_REQUIRED_FLAGS " ${PTHREAD_CFLAGS} ${PTHREAD_LDFLAGS}")
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${PTHREAD_LIBS})
     check_c_source_compiles("
         #include <pthread.h>
         int main(int argc, char** argv) {
@@ -891,7 +895,7 @@ macro(CheckPTHREAD)
       set(SDL_THREAD_PTHREAD 1)
       separate_arguments(PTHREAD_CFLAGS)
       sdl_compile_options(PRIVATE ${PTHREAD_CFLAGS})
-      sdl_link_dependency(pthread LINK_OPTIONS ${PTHREAD_LDFLAGS})
+      sdl_link_dependency(pthread LINK_OPTIONS ${PTHREAD_LDFLAGS} LIBS ${PTHREAD_LIBS})
 
       check_c_source_compiles("
         #include <pthread.h>
@@ -953,7 +957,7 @@ macro(CheckPTHREAD)
         "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_systhread.c"
         "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_sysmutex.c"   # Can be faked, if necessary
         "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_syscond.c"    # Can be faked, if necessary
-        "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_sysrwlock.c"   # Can be faked, if necessary
+        "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_sysrwlock.c"  # Can be faked, if necessary
         "${SDL3_SOURCE_DIR}/src/thread/pthread/SDL_systls.c"
       )
       if(HAVE_PTHREADS_SEM)

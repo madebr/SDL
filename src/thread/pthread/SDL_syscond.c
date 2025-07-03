@@ -117,9 +117,11 @@ tryagain:
     case EINTR:
         goto tryagain;
         // break; -Wunreachable-code-break
+#if defined(ETIMEDOUT)
     case ETIMEDOUT:
         result = false;
         break;
+#endif
     default:
         result = true;
         break;

@@ -141,7 +141,7 @@ endif()
 #  for the time being. This default will change to ON once this becomes
 #  commonly supported in browsers or the Emscripten team makes a single
 #  binary work everywhere.
-if (UNIX_OR_MAC_SYS AND NOT EMSCRIPTEN)
+if ((UNIX_OR_MAC_SYS AND NOT EMSCRIPTEN) OR DJGPP)
   set(SDL_PTHREADS_DEFAULT ON)
 else()
   set(SDL_PTHREADS_DEFAULT OFF)
@@ -2976,6 +2976,9 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/unix/*.c")
   set(HAVE_SDL_TIME TRUE)
 
+  CheckPTHREAD()
+  set(HAVE_SDL_THREADS TRUE)
+
   # !!! FIXME
   set(SDL_TIMER_UNIX 1)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/unix/*.c")
@@ -3236,7 +3239,7 @@ endif()
 # We always need to have threads and timers around
 if(NOT HAVE_SDL_THREADS)
   # The Emscripten and N-Gage platform has been carefully vetted to work without threads
-  if(EMSCRIPTEN OR NGAGE OR DOS)
+  if(EMSCRIPTEN OR NGAGE)
     set(SDL_THREADS_DISABLED 1)
     sdl_glob_sources("${SDL3_SOURCE_DIR}/src/thread/generic/*.c")
   else()
