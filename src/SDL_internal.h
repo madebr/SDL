@@ -290,6 +290,7 @@ extern SDL_NORETURN void SDL_ExitProcess(int exitcode);
 #define POP_SDL_ERROR() \
     SDL_SetError("%s", _error); SDL_free(_error); }
 
+// @madebr test
 #if defined(SDL_DISABLE_INVALID_PARAMS)
 #ifdef DEBUG
 // If you define SDL_DISABLE_INVALID_PARAMS, you're promising that you'll
