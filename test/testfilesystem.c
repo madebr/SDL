@@ -15,10 +15,15 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_test.h>
 
-static SDL_EnumerationResult SDLCALL enum_callback(void *userdata, const char *origdir, const char *fname)
+typedef struct {
+    int depth;
+} EnumDirUserContext;
+
+static SDL_EnumerationResult SDLCALL enum_dir_callback(void *userdata, const char *origdir, const char *fname)
 {
     SDL_PathInfo info;
     char *fullpath = NULL;
+    EnumDirUserContext *context = (EnumDirUserContext *)userdata;
 
     if (SDL_asprintf(&fullpath, "%s%s", origdir, fname) < 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!");
@@ -36,13 +41,15 @@ static SDL_EnumerationResult SDLCALL enum_callback(void *userdata, const char *o
         } else {
             type = "OTHER";
         }
-        SDL_Log("DIRECTORY %s (type=%s, size=%" SDL_PRIu64 ", create=%" SDL_PRIu64 ", mod=%" SDL_PRIu64 ", access=%" SDL_PRIu64 ")",
-                fullpath, type, info.size, info.modify_time, info.create_time, info.access_time);
+        SDL_Log("DIRECTORY %s (type=%s, size=%" SDL_PRIu64 ", create=%" SDL_PRIu64 ", mod=%" SDL_PRIu64 ", access=%" SDL_PRIu64 ") depth=%d",
+                fullpath, type, info.size, info.modify_time, info.create_time, info.access_time, context->depth);
 
         if (info.type == SDL_PATHTYPE_DIRECTORY) {
-            if (!SDL_EnumerateDirectory(fullpath, enum_callback, userdata)) {
+            context->depth++;
+            if (!SDL_EnumerateDirectory(fullpath, enum_dir_callback, userdata)) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Enumeration failed!");
             }
+            context->depth--;
         }
     }
 
@@ -53,7 +60,7 @@ static SDL_EnumerationResult SDLCALL enum_callback(void *userdata, const char *o
 
 static SDL_EnumerationResult SDLCALL enum_storage_callback(void *userdata, const char *origdir, const char *fname)
 {
-    SDL_Storage *storage = (SDL_Storage *) userdata;
+    SDL_Storage *storage = userdata;
     SDL_PathInfo info;
     char *fullpath = NULL;
 
@@ -151,12 +158,19 @@ int main(int argc, char *argv[])
         SDL_IOStream *stream;
         const char *text = "foo\n";
         SDL_PathInfo pathinfo;
+        EnumDirUserContext enum_dir_context;
 
-        if (!SDL_EnumerateDirectory(base_path, enum_callback, NULL)) {
+        enum_dir_context.depth = 0;
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_EnumerateDirectory(\"%s\") pre", base_path);
+        if (!SDL_EnumerateDirectory(base_path, enum_dir_callback, &enum_dir_context)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Base path enumeration failed!");
         }
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_EnumerateDirectory() post");
+        SDL_assert(enum_dir_context.depth == 0);
 
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_GlobDirectory(\"%s\") pre", "*/test*/T?st*");
         globlist = SDL_GlobDirectory(base_path, "*/test*/T?st*", SDL_GLOB_CASEINSENSITIVE, NULL);
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_GlobDirectory() post");
         if (!globlist) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Base path globbing failed!");
         } else {
@@ -167,6 +181,7 @@ int main(int argc, char *argv[])
             SDL_free(globlist);
         }
 
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_CreateDirectory(\"%s\") pre", "testfilesystem-test");
         /* !!! FIXME: put this in a subroutine and make it test more thoroughly (and put it in testautomation). */
         if (!SDL_CreateDirectory("testfilesystem-test")) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateDirectory('testfilesystem-test') failed: %s", SDL_GetError());
@@ -193,6 +208,7 @@ int main(int argc, char *argv[])
         } else if (!SDL_RemovePath("testfilesystem-test")) {  /* THIS SHOULD NOT FAIL! Removing a directory that is already gone should succeed here. */
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_RemovePath('testfilesystem-test') failed: %s", SDL_GetError());
         }
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_CreateDirectory() post");
 
         stream = SDL_IOFromFile("testfilesystem-A", "wb");
         if (stream) {
@@ -230,15 +246,21 @@ int main(int argc, char *argv[])
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_IOFromFile('testfilesystem-A', 'w') failed: %s", SDL_GetError());
         }
 
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_OpenFileStorage(\"%s\") pre", base_path);
         storage = SDL_OpenFileStorage(base_path);
+        SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_OpenFileStorage() post");
         if (!storage) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to open base path storage object: %s", SDL_GetError());
         } else {
+            SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_EnumerateStorageDirectory() pre");
             if (!SDL_EnumerateStorageDirectory(storage, "CMakeFiles", enum_storage_callback, storage)) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Storage Base path enumeration failed!");
             }
+            SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_EnumerateStorageDirectory() post");
 
+            SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_GlobStorageDirectory() pre");
             globlist = SDL_GlobStorageDirectory(storage, "", "C*/test*/T?st*", SDL_GLOB_CASEINSENSITIVE, NULL);
+            SDL_LogTrace(SDL_LOG_CATEGORY_TEST, "SDL_GlobStorageDirectory() post");
             if (!globlist) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Base path globbing failed!");
             } else {
