@@ -464,6 +464,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test
                     "fcitx-libs-dev",
                 ))
                 match = re.match(r"ubuntu-(?P<year>[0-9]+)\.(?P<month>[0-9]+).*", spec.os.value)
+                assert match
                 ubuntu_year, ubuntu_month = [int(match["year"]), int(match["month"])]
                 if ubuntu_year >= 22:
                     job.apt_packages.extend(("libpipewire-0.3-dev", "libdecor-0-dev"))
