@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import shlex
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -230,6 +231,7 @@ class JobDetails:
     pypi_packages: list[str] = dataclasses.field(default_factory=list)
     setup_gage_sdk_path: str = ""
     binutils_strings: str = "strings"
+    ctest_args: str = ""
 
     def to_workflow(self, enable_artifacts: bool) -> dict[str, str|bool]:
         data = {
@@ -300,6 +302,7 @@ class JobDetails:
             "pypi-packages": my_shlex_join(self.pypi_packages),
             "setup-ngage-sdk-path": self.setup_gage_sdk_path,
             "binutils-strings": self.binutils_strings,
+            "ctest-args": self.ctest_args,
         }
         return {k: v for k, v in data.items() if v != ""}
 
@@ -315,7 +318,7 @@ def my_shlex_join(s):
     return " ".join(escape(s))
 
 
-def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test_env: list[str]) -> JobDetails:
+def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test_env: list[str], ctest_args: list[str]) -> JobDetails:
     job = JobDetails(
         name=spec.name,
         key=key,
@@ -789,6 +792,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test
             "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
             "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
         ))
+    job.ctest_args = shlex.join(ctest_args)
     if not build_parallel:
         job.cmake_build_arguments.append("-j1")
     if job.cflags or job.cppflags:
@@ -811,9 +815,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test
     return job
 
 
-def spec_to_platform(spec: JobSpec, key: str, enable_artifacts: bool, trackmem_symbol_names: bool, extra_test_env:list[str]) -> dict[str, str|bool]:
+def spec_to_platform(spec: JobSpec, key: str, enable_artifacts: bool, trackmem_symbol_names: bool, extra_test_env:list[str], ctest_args:list[str]) -> dict[str, str|bool]:
     logger.info("spec=%r", spec)
-    job = spec_to_job(spec, key=key, trackmem_symbol_names=trackmem_symbol_names, extra_test_env=extra_test_env)
+    job = spec_to_job(spec, key=key, trackmem_symbol_names=trackmem_symbol_names, extra_test_env=extra_test_env, ctest_args=ctest_args)
     logger.info("job=%r", job)
     platform = job.to_workflow(enable_artifacts=enable_artifacts)
     logger.info("platform=%r", platform)
@@ -843,6 +847,7 @@ def main():
 
     filters = []
     extra_test_env = []
+    ctest_args = []
     if args.commit_message_file:
         with open(args.commit_message_file, "r") as f:
             commit_message = f.read()
@@ -858,6 +863,9 @@ def main():
             for m in re.finditer(r"\[sdl-ci-test-env (.*)]", commit_message, flags=re.M):
                 extra_test_env.append(m.group(1))
 
+            for m in re.finditer(r"\[sdl-ci-ctest-args? (.*)]", commit_message, flags=re.M):
+                ctest_args.extend(shlex.split(m.group(1)))
+
     if not filters:
         filters.append("*")
 
@@ -865,7 +873,7 @@ def main():
 
     all_level_platforms = {}
 
-    all_platforms = {key: spec_to_platform(spec, key=key, enable_artifacts=args.enable_artifacts, trackmem_symbol_names=args.trackmem_symbol_names, extra_test_env=extra_test_env) for key, spec in JOB_SPECS.items()}
+    all_platforms = {key: spec_to_platform(spec, key=key, enable_artifacts=args.enable_artifacts, trackmem_symbol_names=args.trackmem_symbol_names, extra_test_env=extra_test_env, ctest_args=ctest_args) for key, spec in JOB_SPECS.items()}
 
     for level_i, level_keys in enumerate(all_level_keys, 1):
         level_key = f"level{level_i}"
