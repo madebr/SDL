@@ -838,13 +838,7 @@ def main():
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING)
 
     remaining_keys = set(JOB_SPECS.keys())
-
-    all_level_keys = (
-        # Level 1
-        (
-            "haiku",
-        ),
-    )
+    level1_keys = []
 
     filters = []
     extra_test_env = []
@@ -852,6 +846,9 @@ def main():
     if args.commit_message_file:
         with open(args.commit_message_file, "r") as f:
             commit_message = f.read()
+            for m in re.finditer(r"\[sdl-ci-level1 (.*)]", commit_message, flags=re.M):
+                level1_keys.append(m.group(1).strip(" \t\n\r\t'\""))
+
             for m in re.finditer(r"\[sdl-ci-filter (.*)]", commit_message, flags=re.M):
                 filters.append(m.group(1).strip(" \t\n\r\t'\""))
 
@@ -875,6 +872,13 @@ def main():
     all_level_platforms = {}
 
     all_platforms = {key: spec_to_platform(spec, key=key, enable_artifacts=args.enable_artifacts, trackmem_symbol_names=args.trackmem_symbol_names, extra_test_env=extra_test_env, ctest_args=ctest_args) for key, spec in JOB_SPECS.items()}
+
+    if not level1_keys:
+        level1_keys.append("haiku")
+    all_level_keys = (
+        # Level 1
+        tuple(level1_keys),
+    )
 
     for level_i, level_keys in enumerate(all_level_keys, 1):
         level_key = f"level{level_i}"
