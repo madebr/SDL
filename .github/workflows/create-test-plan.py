@@ -315,7 +315,7 @@ def my_shlex_join(s):
     return " ".join(escape(s))
 
 
-def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDetails:
+def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test_env: list[str]) -> JobDetails:
     job = JobDetails(
         name=spec.name,
         key=key,
@@ -336,6 +336,8 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
         pretest_cmd.append("export SDL_TRACKMEM_SYMBOL_NAMES=1")
     else:
         pretest_cmd.append("export SDL_TRACKMEM_SYMBOL_NAMES=0")
+    for env in extra_test_env:
+        pretest_cmd.append(f"export {env}")
     win32 = spec.platform in (SdlPlatform.Msys2, SdlPlatform.Msvc)
     fpic = None
     build_parallel = True
@@ -809,9 +811,9 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool) -> JobDeta
     return job
 
 
-def spec_to_platform(spec: JobSpec, key: str, enable_artifacts: bool, trackmem_symbol_names: bool) -> dict[str, str|bool]:
+def spec_to_platform(spec: JobSpec, key: str, enable_artifacts: bool, trackmem_symbol_names: bool, extra_test_env:list[str]) -> dict[str, str|bool]:
     logger.info("spec=%r", spec)
-    job = spec_to_job(spec, key=key, trackmem_symbol_names=trackmem_symbol_names)
+    job = spec_to_job(spec, key=key, trackmem_symbol_names=trackmem_symbol_names, extra_test_env=extra_test_env)
     logger.info("job=%r", job)
     platform = job.to_workflow(enable_artifacts=enable_artifacts)
     logger.info("platform=%r", platform)
@@ -840,6 +842,7 @@ def main():
     )
 
     filters = []
+    extra_test_env = []
     if args.commit_message_file:
         with open(args.commit_message_file, "r") as f:
             commit_message = f.read()
@@ -852,6 +855,9 @@ def main():
             if re.search(r"\[sdl-ci-(full-)?trackmem(-symbol-names)?]", commit_message, flags=re.M):
                 args.trackmem_symbol_names = True
 
+            for m in re.finditer(r"\[sdl-ci-test-env (.*)]", commit_message, flags=re.M):
+                extra_test_env.append(m.group(1))
+
     if not filters:
         filters.append("*")
 
@@ -859,7 +865,7 @@ def main():
 
     all_level_platforms = {}
 
-    all_platforms = {key: spec_to_platform(spec, key=key, enable_artifacts=args.enable_artifacts, trackmem_symbol_names=args.trackmem_symbol_names) for key, spec in JOB_SPECS.items()}
+    all_platforms = {key: spec_to_platform(spec, key=key, enable_artifacts=args.enable_artifacts, trackmem_symbol_names=args.trackmem_symbol_names, extra_test_env=extra_test_env) for key, spec in JOB_SPECS.items()}
 
     for level_i, level_keys in enumerate(all_level_keys, 1):
         level_key = f"level{level_i}"
