@@ -116,6 +116,7 @@ int main(int argc, char *argv[])
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init() failed: %s", SDL_GetError());
         return 1;
     }
+    SDL_Delay(20000);
 
     base_path = SDL_GetBasePath();
     if (!base_path) {
