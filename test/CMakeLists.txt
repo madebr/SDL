@@ -618,6 +618,10 @@ function(add_sdl_test TEST TARGET)
             COMMAND ${command}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         )
+        if(NOT EMSCRIPTEN)
+            set_property(TEST ${TEST} PROPERTY TIMEOUT_SIGNAL_NAME SIGQUIT)
+            set_property(TEST ${TEST} PROPERTY TIMEOUT_SIGNAL_GRACE_PERIOD 2)
+        endif()
         if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
             set_property(TEST ${TEST} APPEND PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_RUNTIME_DLL_DIRS:${TARGET}>")
         endif()
