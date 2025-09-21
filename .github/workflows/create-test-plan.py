@@ -507,6 +507,14 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, extra_test
                         "-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0",
                     ])
         case SdlPlatform.MacOS:
+            pretest_cmd.extend((
+                "# Coredumps (https://nasa.github.io/trick/howto_guides/How-to-dump-core-file-on-MacOS.html)",
+                "sudo chmod 1777 /cores",
+                "sudo sysctl kern.coredump=1",
+                "sudo sysctl kern.coredump",
+                "sudo ulimit -c unlimited",
+            ))
+            job.cmake_arguments.append("-DSDLTEST_COREDUMP=ON")
             if spec.apple_framework:
                 job.static = False
                 job.clang_tidy = False

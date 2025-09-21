@@ -428,6 +428,7 @@ jobs:
           path: |
             build/dist/SDL3*
             build/include*
+            /cores/*
       - name: 'Upload minidumps'
         uses: actions/upload-artifact@v4
         if: ${{ always() && steps.tests.outcome == 'failure' && (matrix.platform.platform == 'msvc' || matrix.platform.platform == 'msys2') }}

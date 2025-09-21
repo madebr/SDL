@@ -41,6 +41,17 @@ file(GLOB RESOURCE_FILES *.bmp *.wav *.csv *.hex moose.dat utf8.txt)
 
 option(SDLTEST_TRACKMEM "Run tests with --trackmem" OFF)
 
+if(APPLE)
+    option(SDLTEST_COREDUMP "Sign tests to allow coredumps" OFF)
+    if(SDLTEST_COREDUMP)
+        set(SEGV_ENTITLEMENTS_PATH "${CMAKE_CURRENT_BINARY_DIR}/segv.entitlements")
+        find_program(PLISTBUDDY_BIN NAMES PlistBuddy PATHS /usr/libexec REQUIRED)
+        add_custom_command(OUTPUT "${SEGV_ENTITLEMENTS_PATH}"
+            COMMAND "${PLISTBUDDY_BIN}" -c "Add :com.apple.security.get-task-allow bool true" "${SEGV_ENTITLEMENTS_PATH}")
+        add_custom_target(create_segv_entitlements DEPENDS "${SEGV_ENTITLEMENTS_PATH}")
+    endif()
+endif()
+
 if(WIN32)
     option(SDLTEST_PROCDUMP "Run tests using sdlprocdump for minidump generation" OFF)
     add_executable(sdlprocdump win32/sdlprocdump.c)
@@ -179,6 +190,12 @@ function(add_sdl_test_executable TARGET)
         endif()
     endif()
 
+    if(SDLTEST_COREDUMP)
+        if(APPLE)
+            add_dependencies(${TARGET} create_segv_entitlements)
+            add_custom_command(TARGET ${TARGET} POST_BUILD COMMAND codesign -s - -f --entitlements "${SEGV_ENTITLEMENTS_PATH}" "$<TARGET_FILE:${TARGET}>")
+        endif()
+    endif()
     if(WINDOWS)
         # CET support was added in VS 16.7
         if(MSVC_VERSION GREATER 1926 AND CMAKE_GENERATOR_PLATFORM MATCHES "Win32|x64")
