@@ -5983,27 +5983,11 @@ extern SDL_DECLSPEC char * SDLCALL SDL_iconv_string(const char *tocode,
    here, since there are possibly tests that are ineffective otherwise. */
 #if defined(__clang_analyzer__) && !defined(SDL_DISABLE_ANALYZE_MACROS)
 
-/* The analyzer knows about strlcpy even when the system doesn't provide it */
-#if !defined(HAVE_STRLCPY) && !defined(strlcpy)
 size_t strlcpy(char *dst, const char *src, size_t size);
-#endif
-
-/* The analyzer knows about strlcat even when the system doesn't provide it */
-#if !defined(HAVE_STRLCAT) && !defined(strlcat)
 size_t strlcat(char *dst, const char *src, size_t size);
-#endif
-
-#if !defined(HAVE_WCSLCPY) && !defined(wcslcpy)
 size_t wcslcpy(wchar_t *dst, const wchar_t *src, size_t size);
-#endif
-
-#if !defined(HAVE_WCSLCAT) && !defined(wcslcat)
 size_t wcslcat(wchar_t *dst, const wchar_t *src, size_t size);
-#endif
-
-#if !defined(HAVE_STRTOK_R) && !defined(strtok_r)
 char *strtok_r(char *str, const char *delim, char **saveptr);
-#endif
 
 #ifndef _WIN32
 /* strdup is not ANSI but POSIX, and its prototype might be hidden... */
