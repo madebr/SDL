@@ -25,6 +25,13 @@ typedef struct {
     Uint8 micro;
 } VersionTuple;
 
+/* Rock-Paper-Scissor does not have a total ordering: rock < paper < scissor < rock */
+typedef enum{
+    ROCK = 0,
+    PAPER = 0,
+    SCISSOR = 0,
+} RockPaperScissor;
+
 static int a_global_var = 77;
 static int (SDLCALL * global_compare_cbfn)(const void *_a, const void *_b);
 
@@ -63,6 +70,33 @@ compare_intptr(const void *_a, const void *_b)
     return compare_int(a, b);
 }
 
+/* This compare function does not maintain relative order */
+static int SDLCALL
+compare_int_non_transivitive(const void *_a, const void *_b)
+{
+    const int a = *((const int *)_a);
+    const int b = *((const int *)_b);
+    return (a < b) ? 0 : 1;
+}
+
+/* This compare function does not maintain relative order */
+static int SDLCALL
+compare_intptr_non_transivitive(const void *_a, const void *_b)
+{
+    const int* a = *((const int **)_a);
+    const int* b = *((const int **)_b);
+    return (*a < *b) ? 0 : 1;
+}
+
+/* This compare function returns random results */
+static int SDLCALL
+compare_random(const void *_a, const void *_b)
+{
+    (void)_a;
+    (void)_b;
+    return SDLTest_RandomIntegerInRange(-1, 1);
+}
+
 static int SDLCALL
 compare_version(const void *_a, const void *_b)
 {
@@ -84,6 +118,20 @@ compare_version(const void *_a, const void *_b)
 #define SDL_qsort qsort
 #define SDL_qsort_r qsort_r
 #endif
+
+static int SDLCALL
+compare_rockpaperscissor(const void *_a, const void *_b)
+{
+    static const int WINNER_LUT[3][3] = {
+        /*         R   P   S */
+        /* R */ {  0,  1, -1 },
+        /* P */ { -1,  0,  1},
+        /* S */ {  1, -1,  0},
+    };
+    const RockPaperScissor *a = ((const RockPaperScissor *)_a);
+    const RockPaperScissor *b = ((const RockPaperScissor *)_b);
+    return WINNER_LUT[*a][*b];
+}
 
 static int SDLCALL
 #ifdef TEST_STDLIB_QSORT
@@ -198,6 +246,8 @@ generic_compare_r(void *userdata, const void *a, const void *b)
 #define INT_ISLE(A, B) ((A) <= (B))
 
 #define INTPTR_ISLE(A, B) (*(A) <= *(B))
+
+#define ISLE_DONTCARE(A, B) true
 
 #define FLOAT_ISLE(A, B) ((A) <= (B))
 
@@ -436,6 +486,58 @@ static int SDLCALL qsort_testRandomSorted(void *arg)
     return TEST_COMPLETED;
 }
 
+static int SDLCALL qsort_testNonTransitiveCompare(void *arg)
+{
+    unsigned int iteration;
+    (void)arg;
+
+    for (iteration = 0; iteration < count_arraylens; iteration++) {
+        const unsigned int arraylen = arraylens[iteration];
+        unsigned int i;
+        int *ints = SDL_malloc(sizeof(int) * arraylen);
+        int **intptrs = SDL_malloc(sizeof(int *) * arraylen);
+        RockPaperScissor *rps = SDL_malloc(sizeof(RockPaperScissor) * arraylen);
+
+        for (i = 0; i < arraylen; i++) {
+            ints[i] = SDLTest_RandomIntegerInRange(0, MAX_RANDOM_INT_VALUE - 1);
+            intptrs[i] = &ints[SDLTest_RandomIntegerInRange(0, arraylen - 1)];
+            rps[i] = (RockPaperScissor)SDLTest_RandomIntegerInRange(0, 2);
+        }
+        TEST_QSORT_ARRAY(int, ints, arraylen, compare_int_non_transivitive, CHECK_ELEMS_SORTED_ARRAY_RANDOM_INT, ISLE_DONTCARE);
+        TEST_QSORT_ARRAY(int *, intptrs, arraylen, compare_intptr_non_transivitive, CHECK_ELEMS_SORTED_ARRAY_RANDOM_NOP, ISLE_DONTCARE);
+        TEST_QSORT_ARRAY(RockPaperScissor , rps, arraylen, compare_rockpaperscissor, CHECK_ELEMS_SORTED_ARRAY_RPS, ISLE_DONTCARE);
+
+        SDL_free(ints);
+        SDL_free(intptrs);
+        SDL_free(rps);
+    }
+    return TEST_COMPLETED;
+}
+
+static int SDLCALL qsort_testRandomCompare(void *arg)
+{
+    unsigned int iteration;
+    (void)arg;
+
+    for (iteration = 0; iteration < count_arraylens; iteration++) {
+        const unsigned  int arraylen = arraylens[iteration];
+        unsigned int i;
+        int *ints = SDL_malloc(sizeof(int) * arraylen);
+        int **intptrs = SDL_malloc(sizeof(int *) * arraylen);
+
+        for (i = 0; i < arraylen; i++) {
+            ints[i] = SDLTest_RandomIntegerInRange(0, MAX_RANDOM_INT_VALUE - 1);
+            intptrs[i] = &ints[SDLTest_RandomIntegerInRange(0, arraylen - 1)];
+        }
+        TEST_QSORT_ARRAY(int, ints, arraylen, compare_random, CHECK_ELEMS_SORTED_ARRAY_RANDOM_INT, ISLE_DONTCARE);
+        TEST_QSORT_ARRAY(int *, intptrs, arraylen, compare_random, CHECK_ELEMS_SORTED_ARRAY_RANDOM_NOP, ISLE_DONTCARE);
+
+        SDL_free(ints);
+        SDL_free(intptrs);
+    }
+    return TEST_COMPLETED;
+}
+
 static const SDLTest_TestCaseReference qsortTestAlreadySorted = {
     qsort_testAlreadySorted, "qsort_testAlreadySorted", "Test sorting already sorted array", TEST_ENABLED
 };
@@ -452,11 +554,21 @@ static const SDLTest_TestCaseReference qsortTestRandomSorted = {
     qsort_testRandomSorted, "qsort_testRandomSorted", "Test sorting a random array", TEST_ENABLED
 };
 
+static const SDLTest_TestCaseReference qsortTestNonTransitiveCompare = {
+    qsort_testNonTransitiveCompare, "qsort_nonTransitiveCompare", "Test sorting with a non transitive compare function", TEST_ENABLED
+};
+
+static const SDLTest_TestCaseReference qsortTestRandomCompare = {
+    qsort_testRandomCompare, "qsort_randomCompare", "Test sorting with a compare function returning random values", TEST_ENABLED
+};
+
 static const SDLTest_TestCaseReference *qsortTests[] = {
     &qsortTestAlreadySorted,
     &qsortTestAlreadySortedExceptLast,
     &qsortTestReverseSorted,
     &qsortTestRandomSorted,
+    &qsortTestNonTransitiveCompare,
+    &qsortTestRandomCompare,
     NULL
 };
 
