@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(CMAKE_C_COMPILER_LAUNCHER "python;${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/cake-wrapper.py")
+message(STATUS "Configuring SDL for Cake: CMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
+
 if(NOT DEFINED CMAKE_BUILD_TYPE)
   set(cmake_build_type_undefined 1)
 endif()
