@@ -68,7 +68,7 @@ def main() -> int:
         if arg.endswith(".c"):
             original_src = Path(arg)
             caked_src = Path(tempfile.gettempdir()) / original_src.with_suffix(".cake.c").name
-            cake_cmd = [CAKE] + cake_args + [f"-I{original_src.parent}", str(original_src), "-o", str(caked_src)]
+            cake_cmd = [CAKE] + cake_args + [f"-I{original_src.parent}", str(original_src), "-o", str(caked_src), "-test-mode"]
             compiler_cmd.append(f"-I{caked_src.parent}")
             if DEBUG_WRAPPER:
                 print(f"Running cake: '{shlex.join(cake_cmd)}'", file=sys.stderr)
