@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(CMAKE_DISABLE_PRECOMPILED_HEADERS ON)
 set(CMAKE_C_COMPILER_LAUNCHER "python3;${CMAKE_CURRENT_SOURCE_DIR}/build-scripts/cake-wrapper.py")
 message(STATUS "Configuring SDL for Cake: CMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
 
@@ -4340,3 +4341,8 @@ string(APPEND CMAKE_OBJC_FLAGS " ${CMAKE_C_FLAGS}")
 
 SDL_PrintSummary()
 debug_show_sdl_deps()
+
+get_property(CFLAGS TARGET SDL3-shared PROPERTY COMPILE_OPTIONS)
+get_property(SOURCES TARGET SDL3-shared PROPERTY SOURCES)
+message("CFLAGS=${CFLAGS}")
+message("SOURCES=${SOURCES}")
