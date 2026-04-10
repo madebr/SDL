@@ -77,14 +77,24 @@ static SDL_tracked_allocation *s_tracked_allocations[256];
 static bool s_randfill_allocations = false;
 static SDL_AtomicInt s_lock;
 
-#define LOCK_ALLOCATOR()                                  \
-    do {                                                  \
-        if (SDL_CompareAndSwapAtomicInt(&s_lock, 0, 1)) { \
-            break;                                        \
-        }                                                 \
-        SDL_CPUPauseInstruction();                        \
-    } while (true)
-#define UNLOCK_ALLOCATOR() do { SDL_SetAtomicInt(&s_lock, 0); } while (0)
+#define LOCK_ALLOCATOR()                                        \
+    do {                                                        \
+        SDL_CompilerBarrier();                                  \
+        do {                                                    \
+            if (SDL_CompareAndSwapAtomicInt(&s_lock, 0, 1)) {   \
+                break;                                          \
+            }                                                   \
+            SDL_CPUPauseInstruction();                          \
+        } while (true);                                         \
+        SDL_CompilerBarrier();                                  \
+    } while (0)
+
+#define UNLOCK_ALLOCATOR()                                      \
+    do {                                                        \
+        SDL_CompilerBarrier();                                  \
+        SDL_SetAtomicInt(&s_lock, 0);                           \
+        SDL_CompilerBarrier();                                  \
+    } while (0)
 
 static unsigned int get_allocation_bucket(void *mem)
 {
