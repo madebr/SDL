@@ -343,9 +343,6 @@ quit(int rc)
 
 static const char *get_active_cursor_name()
 {
-    // if (!current_cursor_valid) {
-    //     return "";
-    // }
     switch ((int)cursor_types[current_cursor]) {
     case CUSTOM_CURSOR_ARGUMENTS:
         return "Custom cursor (arguments)";
