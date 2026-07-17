@@ -23,6 +23,7 @@ class MsvcArch(Enum):
     X86 = "x86"
     X64 = "x64"
     Arm64 = "arm64"
+    Arm64ec = "arm64ec"
 
 
 class JobOs(Enum):
@@ -113,14 +114,15 @@ JOB_SPECS = {
     "msys2-mingw32": JobSpec(name="Windows (msys2, mingw32)",               priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msys2,       artifact="SDL-mingw32",            msys2_platform=Msys2Platform.Mingw32, ),
     "msys2-mingw64": JobSpec(name="Windows (msys2, mingw64)",               priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msys2,       artifact="SDL-mingw64",            msys2_platform=Msys2Platform.Mingw64, ),
     "msys2-clang64": JobSpec(name="Windows (msys2, clang64)",               priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msys2,       artifact="SDL-mingw64-clang",      msys2_platform=Msys2Platform.Clang64, ),
-    "msys2-ucrt64": JobSpec(name="Windows (msys2, ucrt64)",                 priority=True, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msys2,       artifact="SDL-mingw64-ucrt",       msys2_platform=Msys2Platform.Ucrt64, ),
+    "msys2-ucrt64": JobSpec(name="Windows (msys2, ucrt64)",                 priority=True, os=JobOs.WindowsLatest,      platform=SdlPlatform.Msys2,       artifact="SDL-mingw64-ucrt",       msys2_platform=Msys2Platform.Ucrt64, ),
     "cygwin": JobSpec(name="Cygwin",                                        priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Cygwin,      artifact="SDL-cygwin", ),
     "msvc-x64": JobSpec(name="Windows (MSVC, x64)",                         priority=True,  os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-VC-x64",             msvc_arch=MsvcArch.X64,   msvc_project="VisualC/SDL.sln", ),
     "msvc-x86": JobSpec(name="Windows (MSVC, x86)",                         priority=True,  os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-VC-x86",             msvc_arch=MsvcArch.X86,   msvc_project="VisualC/SDL.sln", ),
     "msvc-clang-x64": JobSpec(name="Windows (MSVC, clang-cl x64)",          priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-clang-cl-x64",       msvc_arch=MsvcArch.X64,   clang_cl=True, ),
     "msvc-clang-x86": JobSpec(name="Windows (MSVC, clang-cl x86)",          priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-clang-cl-x86",       msvc_arch=MsvcArch.X86,   clang_cl=True, ),
     "msvc-arm64": JobSpec(name="Windows (MSVC, ARM64)",                     priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-VC-arm64",           msvc_arch=MsvcArch.Arm64, msvc_project="VisualC/SDL.sln", ),
-    "msvc-gdk-x64": JobSpec(name="GDK (MSVC, x64)",                         priority=False, os=JobOs.Windows2022,     platform=SdlPlatform.Msvc,          artifact="SDL-VC-GDK",             msvc_arch=MsvcArch.X64,   msvc_project="VisualC-GDK/SDL.sln", gdk=True, no_cmake=True, ),
+    "msvc-arm64ec": JobSpec(name="Windows (MSVC, ARM64EC)",                 priority=False, os=JobOs.WindowsLatest,     platform=SdlPlatform.Msvc,        artifact="SDL-VC-arm64ec",         msvc_arch=MsvcArch.Arm64ec, ),
+    "msvc-gdk-x64": JobSpec(name="GDK (MSVC, x64)",                         priority=False, os=JobOs.Windows2022,       platform=SdlPlatform.Msvc,        artifact="SDL-VC-GDK",             msvc_arch=MsvcArch.X64,   msvc_project="VisualC-GDK/SDL.sln", gdk=True, no_cmake=True, ),
     "ubuntu-22.04": JobSpec(name="Ubuntu 22.04",                            priority=False, os=JobOs.Ubuntu22_04,       platform=SdlPlatform.Linux,       artifact="SDL-ubuntu22.04", ),
     "ubuntu-latest": JobSpec(name="Ubuntu (latest)",                        priority=False, os=JobOs.UbuntuLatest,      platform=SdlPlatform.Linux,       artifact="SDL-ubuntu-latest", ),
     "ubuntu-24.04-arm64": JobSpec(name="Ubuntu 24.04 (ARM64)",              priority=False, os=JobOs.Ubuntu24_04_arm,   platform=SdlPlatform.Linux,       artifact="SDL-ubuntu24.04-arm64", ),
@@ -425,7 +427,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, ctest_args
                         msvc_platform = "Win32"
                     case MsvcArch.X64:
                         msvc_platform = "x64"
-                    case MsvcArch.Arm64:
+                    case MsvcArch.Arm64 | MsvcArch.Arm64ec:
                         msvc_platform = "ARM64"
                     case _:
                         raise ValueError(f"Unsupported vcxproj architecture (arch={spec.msvc_arch})")
@@ -437,20 +439,24 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, ctest_args
                     job.msvc_vcvars_arch = "x64_x86"
                 case MsvcArch.X64:
                     job.msvc_vcvars_arch = "x64"
-                case MsvcArch.Arm64:
+                case MsvcArch.Arm64 | MsvcArch.Arm64ec:
                     job.msvc_vcvars_arch = "x64_arm64"
                     job.run_tests = False
+            if spec.msvc_arch == MsvcArch.Arm64ec:
+                job.cflags.append("/arm64ec")
+                job.cxxflags.append("/arm64ec")
+                job.ldflags.append("/MACHINE:ARM64EC")
             if spec.gdk:
                 job.setup_gdk_folder = "VisualC-GDK"
             else:
                 match spec.msvc_arch:
                     case MsvcArch.X86:
                         job.setup_libusb_arch = "x86"
-                    case MsvcArch.X64:
+                    case MsvcArch.X64 | MsvcArch.Arm64ec:
                         job.setup_libusb_arch = "x64"
                 job.microsoft_gameinput = True
                 match spec.msvc_arch:
-                    case MsvcArch.X64:
+                    case MsvcArch.X64 | MsvcArch.Arm64ec:
                         job.microsoft_gameinput_arch = "x64"
                     case MsvcArch.Arm64:
                         job.microsoft_gameinput_arch = "arm64"
