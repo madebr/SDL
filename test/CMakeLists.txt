@@ -168,7 +168,7 @@ function(add_sdl_test_executable TARGET)
         list(APPEND EXTRA_SOURCES ${RESOURCE_FILES})
     endif()
     if(WIN32)
-        if(NOT USE_CLANG)
+        if(1)#NOT USE_CLANG)
             # FIXME: LLVM fails with error 'xxxx.manifest: invalid xml document'
             set(manifest_path "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.dir/${TARGET}.manifest")
             file(GENERATE OUTPUT "${manifest_path}" INPUT "${CMAKE_CURRENT_SOURCE_DIR}/win32/test.manifest.in" TARGET ${TARGET})
