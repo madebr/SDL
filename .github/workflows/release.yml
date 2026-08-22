@@ -171,7 +171,7 @@ jobs:
       - name: 'Mount ${{ needs.dmg.outputs.dmg }}'
         id: mount
         run: |
-          hdiutil attach '${{ github.workspace }}/${{ needs.dmg.outputs.dmg }}'
+          diskutil attach '${{ github.workspace }}/${{ needs.dmg.outputs.dmg }}'
           mount_point="/Volumes/${{ needs.src.outputs.project }}"
           if [ ! -d "$mount_point/${{ needs.src.outputs.project }}.xcframework" ]; then
             echo "Cannot find ${{ needs.src.outputs.project }}.xcframework!"
